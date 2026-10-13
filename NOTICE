@@ -1,0 +1,117 @@
+Notes Pocketbook - third-party notices
+
+This project is licensed under the MIT License (see LICENSE). The following components and
+patterns are used under their own terms.
+
+--------------------------------------------------------------------------------
+InkFeed (MIT License)
+https://github.com/jrohde/InkFeed
+
+Build, launcher and packaging patterns were adapted from InkFeed: the CMake ARM toolchain block
+and manual moc/rcc steps (cmake/sdk.cmake, cmake/qt_manual.cmake), the rotation/devicePixelRatio
+stage (qml/Main.qml; the flat button of the first versions was replaced in 1.10.0 by controls written for this project),
+the InkView glue in app/, the PocketBook launcher script
+(platform/pocketbook/pbnotes.app) and the packaging script (scripts/package-device.sh). The way the
+default web browser is started from a link (OpenBook with BROWSER_FOR_AUTH, app/device_bridge.cpp)
+follows InkFeed's browser launch.
+
+Copyright (c) 2026 Joost Rohde
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+Mozilla CA certificate bundle (MPL-2.0)
+third_party/cacert/cacert.pem, extracted by the curl project (https://curl.se/docs/caextract.html)
+from Mozilla's certificate store. Licensed under the Mozilla Public License 2.0
+(https://www.mozilla.org/MPL/2.0/). Source and checksum: third_party/cacert/VERSION.
+
+--------------------------------------------------------------------------------
+SQLite (public domain)
+third_party/sqlite/sqlite3.c and sqlite3.h, the SQLite amalgamation (https://www.sqlite.org/).
+SQLite is in the public domain. Version and checksums: third_party/sqlite/VERSION.
+
+--------------------------------------------------------------------------------
+Noto Emoji (SIL Open Font License 1.1)
+third_party/noto-emoji/NotoEmoji.ttf, the monochrome Noto Emoji font from the Google Fonts
+repository (https://github.com/google/fonts/tree/main/ofl/notoemoji). Copyright 2013 Google LLC.
+Licensed under the SIL Open Font License, Version 1.1; the license text is third_party/noto-emoji/OFL.txt
+and is installed next to the font on the reader (applications/pbnotes-emoji-OFL.txt). Source commit
+and checksum: third_party/noto-emoji/VERSION.
+
+--------------------------------------------------------------------------------
+Qt 6.8 (Core, Gui, Qml, Quick) (LGPL-3.0)
+https://www.qt.io/licensing/
+
+The user interface is built with Qt, provided by the reader's system software and not redistributed
+by this project. Qt is linked dynamically, so it can be replaced by another build of the same
+version. Qt is available under the GNU Lesser General Public License 3 (and other terms); the full
+texts are shown in the app and in licenses/LGPL-3.0.txt and licenses/GPL-3.0.txt. Qt includes
+further components under their own licenses; see the documentation of the Qt version on the reader.
+
+Copyright (C) The Qt Company Ltd. and other contributors.
+
+--------------------------------------------------------------------------------
+libcurl (curl license)
+https://curl.se/docs/copyright.html
+
+All network connections use libcurl, provided by the reader's system software and not redistributed
+by this project. Licensed under the curl license (MIT-style); the text is shown in the app and in
+licenses/curl.txt.
+
+Copyright (c) Daniel Stenberg, <daniel@haxx.se>, and many contributors.
+
+--------------------------------------------------------------------------------
+OpenSSL (Apache-2.0)
+https://www.openssl.org/source/license.html
+
+libcurl uses OpenSSL, provided by the reader's system software and not redistributed by this
+project, to encrypt and verify connections. Licensed under the Apache License 2.0; the text is
+shown in the app and in licenses/Apache-2.0.txt.
+
+Copyright (c) The OpenSSL Project Authors.
+
+--------------------------------------------------------------------------------
+PocketBook InkView (terms set by PocketBook)
+https://www.pocketbook-int.com
+
+The screen, keys and system functions of the reader are used through PocketBook's InkView library
+(libinkview), part of the reader's firmware and not redistributed by this project. The SDK
+carries no license text for it, so none is shown and no license name is claimed here; the terms
+are those set by PocketBook.
+
+--------------------------------------------------------------------------------
+GNU C Library (LGPL-2.1-or-later)
+https://www.gnu.org/software/libc/
+
+The program links the GNU C Library (libc, libm), provided by the reader's system software and not
+redistributed by this project. Licensed under the GNU Lesser General Public License 2.1 or later;
+the text is shown in the app and in licenses/LGPL-2.1.txt.
+
+Copyright (C) Free Software Foundation, Inc. and other contributors.
+
+--------------------------------------------------------------------------------
+GCC runtime libraries (GPL-3.0-or-later with the GCC Runtime Library Exception 3.1)
+https://www.gnu.org/licenses/gcc-exception-3.1.html
+
+The program links libstdc++ and libgcc_s, provided by the reader's system software and not
+redistributed by this project. Licensed under the GNU General Public License 3 or later with the
+GCC Runtime Library Exception 3.1. The GPL text is shown in the app and in licenses/GPL-3.0.txt;
+the exception is published at the address above.
+
+Copyright (C) Free Software Foundation, Inc.
