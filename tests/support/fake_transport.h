@@ -8,41 +8,41 @@
 #include <string>
 #include <vector>
 
-#include "pbnotes/http_transport.h"
+#include "pbo/http_transport.h"
 
 namespace pbtest {
 
-class FakeTransport : public pbnotes::HttpTransport {
+class FakeTransport : public pbo::HttpTransport {
 public:
     struct Expectation {
         std::string method;
         std::string url_contains;  // substring of the full URL
-        pbnotes::Response response;
+        pbo::Response response;
     };
 
     // Queue of expectations, consumed in order. A request that does not match the next
     // expectation is recorded as a mismatch and answered with a Server error.
-    FakeTransport& expect(const std::string& method, const std::string& url_contains, pbnotes::Response response) {
+    FakeTransport& expect(const std::string& method, const std::string& url_contains, pbo::Response response) {
         queue_.push_back({method, url_contains, std::move(response)});
         return *this;
     }
 
     // Alternative to the queue: a handler decides every answer (fake server logic).
-    void set_handler(std::function<pbnotes::Response(const pbnotes::Request&)> handler) { handler_ = std::move(handler); }
+    void set_handler(std::function<pbo::Response(const pbo::Request&)> handler) { handler_ = std::move(handler); }
 
     // Failure injection: the n-th request (0-based) fails with a transport error instead.
-    void fail_request(size_t index, pbnotes::ErrorClass error) { failures_.push_back({index, error}); }
+    void fail_request(size_t index, pbo::ErrorClass error) { failures_.push_back({index, error}); }
 
     // Simulates a full device for the next file downloads (Response::storage_full, nothing written).
     bool simulate_storage_full = false;
 
-    pbnotes::Response perform(const pbnotes::Request& request) override {
-        pbnotes::Response r = perform_scripted(request);
+    pbo::Response perform(const pbo::Request& request) override {
+        pbo::Response r = perform_scripted(request);
         apply_file_semantics(request, &r);
         return r;
     }
 
-    const std::vector<pbnotes::Request>& requests() const { return requests_; }
+    const std::vector<pbo::Request>& requests() const { return requests_; }
     void clear_requests() { requests_.clear(); }
     const std::vector<std::string>& mismatches() const { return mismatches_; }
     bool all_consumed() const { return next_ == queue_.size(); }
@@ -50,11 +50,11 @@ public:
 private:
     // What the real transport does with save_body_to / max_body_bytes: the body of a 2xx answer goes into the
     // file (Response::body stays empty); a Content-Length or a body over the cap stops the transfer.
-    void apply_file_semantics(const pbnotes::Request& request, pbnotes::Response* r) {
-        if (request.save_body_to.empty() || r->status < 200 || r->status >= 300 || r->error != pbnotes::ErrorClass::None) return;
+    void apply_file_semantics(const pbo::Request& request, pbo::Response* r) {
+        if (request.save_body_to.empty() || r->status < 200 || r->status >= 300 || r->error != pbo::ErrorClass::None) return;
         if (r->body_too_large || r->storage_full) return;
         if (request.method == "HEAD") return;
-        const std::string length = pbnotes::header_value(r->headers, "Content-Length");
+        const std::string length = pbo::header_value(r->headers, "Content-Length");
         if (request.max_body_bytes > 0) {
             const long long declared = length.empty() ? -1 : std::atoll(length.c_str());
             if (declared > request.max_body_bytes || static_cast<long long>(r->body.size()) > request.max_body_bytes) {
@@ -73,12 +73,12 @@ private:
         r->body.clear();
     }
 
-    pbnotes::Response perform_scripted(const pbnotes::Request& request) {
+    pbo::Response perform_scripted(const pbo::Request& request) {
         const size_t index = requests_.size();
         requests_.push_back(request);
         for (const auto& f : failures_) {
             if (f.first == index) {
-                pbnotes::Response r;
+                pbo::Response r;
                 r.error = f.second;
                 r.error_detail = "injected failure";
                 return r;
@@ -93,23 +93,23 @@ private:
             }
         }
         mismatches_.push_back(request.method + " " + request.url);
-        pbnotes::Response r;
+        pbo::Response r;
         r.status = 599;
-        r.error = pbnotes::ErrorClass::Server;
+        r.error = pbo::ErrorClass::Server;
         r.error_detail = "unexpected request";
         return r;
     }
 
 public:
-    static pbnotes::Response ok(const std::string& body, pbnotes::Headers headers = {}) {
-        pbnotes::Response r;
+    static pbo::Response ok(const std::string& body, pbo::Headers headers = {}) {
+        pbo::Response r;
         r.status = 200;
         r.body = body;
         r.headers = std::move(headers);
         return r;
     }
-    static pbnotes::Response status(long code, const std::string& body = "", pbnotes::Headers headers = {}) {
-        pbnotes::Response r;
+    static pbo::Response status(long code, const std::string& body = "", pbo::Headers headers = {}) {
+        pbo::Response r;
         r.status = code;
         r.body = body;
         r.headers = std::move(headers);
@@ -119,9 +119,9 @@ public:
 private:
     std::vector<Expectation> queue_;
     size_t next_ = 0;
-    std::function<pbnotes::Response(const pbnotes::Request&)> handler_;
-    std::vector<std::pair<size_t, pbnotes::ErrorClass>> failures_;
-    std::vector<pbnotes::Request> requests_;
+    std::function<pbo::Response(const pbo::Request&)> handler_;
+    std::vector<std::pair<size_t, pbo::ErrorClass>> failures_;
+    std::vector<pbo::Request> requests_;
     std::vector<std::string> mismatches_;
 };
 

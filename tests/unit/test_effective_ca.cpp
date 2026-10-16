@@ -8,12 +8,12 @@
 #include <string>
 #include <vector>
 
-#include "pbnotes/ca_selector.h"
+#include "pbo/ca_selector.h"
 #include "test_support.h"
 #include "tmp_dir.h"
 
-using pbnotes::build_effective_ca;
-using pbnotes::CustomCaStatus;
+using pbo::build_effective_ca;
+using pbo::CustomCaStatus;
 
 namespace {
 
@@ -24,7 +24,7 @@ std::string slurp(const std::string& path) {
 
 // The first `n` real certificates from the bundled Mozilla CA file (valid PEM/DER structure).
 std::string some_certs(int n) {
-    const std::string all = slurp(std::string(PBNOTES_SOURCE_DIR) + "/third_party/cacert/cacert.pem");
+    const std::string all = slurp(std::string(PBO_SOURCE_DIR) + "/third_party/cacert/cacert.pem");
     std::string out;
     size_t pos = 0;
     for (int i = 0; i < n; ++i) {

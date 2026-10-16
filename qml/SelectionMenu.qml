@@ -16,6 +16,7 @@ Item {
     property real maxY: 100000     // and above this one (the keyboard)
     property real gap: 24
     property real below: 80        // extra room below the selection for its markers
+    property string note: ""       // one line of explanation under the buttons (e.g. why a Paste did nothing)
     property bool pointerAtTop: false   // the bubble sits below the selection: its pointer is on its top edge
     signal chosen(string id)
 
@@ -31,7 +32,7 @@ Item {
     height: bubble.height
 
     function open() { place(); visible = items.length > 0 }
-    function close() { visible = false }
+    function close() { visible = false; note = "" }
     function place() {
         var w = bubble.width, h = bubble.height
         x = Math.max(20, Math.min(anchorX - w / 2, (parent ? parent.width : w) - w - 20))
@@ -48,11 +49,23 @@ Item {
 
     PopupBubble {
         id: bubble
-        width: flow.width + 2 * 18
-        height: flow.height + 2 * 14
+        width: Math.max(flow.width, root.note.length > 0 ? Math.min(560, (root.parent ? root.parent.width : 800) - 40 - 2 * 18) : 0) + 2 * 18
+        height: flow.height + 2 * 14 + (root.note.length > 0 ? noteText.height + 8 : 0)
         pointerUp: root.pointerAtTop
         pointerX: root.anchorX - root.x
 
+        Text {
+            id: noteText
+            objectName: "menuNote"
+            visible: root.note.length > 0
+            x: 18
+            y: 14 + flow.height + 8
+            width: parent.width - 2 * 18
+            wrapMode: Text.Wrap
+            font.pixelSize: Style.captionSize
+            color: Style.ink
+            text: root.note
+        }
         Flow {
             id: flow
             x: 18; y: 14
@@ -67,6 +80,7 @@ Item {
                 id: kids
                 model: root.items
                 delegate: IconButton {
+                    objectName: "menu_" + modelData.id
                     text: modelData.label
                     icon: root.iconFor(modelData.id)
                     iconSize: Style.iconTool

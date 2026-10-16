@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     EditSession editSession;
     SlashBridge slash;
     // Stubs of the objects the pages talk to (the real NotesBridge needs a store and a server).
-    QQmlComponent stubs(&engine, QUrl::fromLocalFile(QStringLiteral(PBNOTES_QML_TEST_DIR "/stubs.qml")));
+    QQmlComponent stubs(&engine, QUrl::fromLocalFile(QStringLiteral(PBO_QML_TEST_DIR "/stubs.qml")));
     QObject* stub = stubs.create();
     if (!stub) {
         std::fprintf(stderr, "stubs: %s\n", stubs.errorString().toUtf8().constData());
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     Pointer pointer;
     ctx->setContextProperty(QStringLiteral("pointer"), &pointer);
     ctx->setContextProperty(QStringLiteral("pageUrl"), QUrl::fromLocalFile(QString::fromLocal8Bit(argv[2])));
-    ctx->setContextProperty(QStringLiteral("srcDir"), QStringLiteral(PBNOTES_SOURCE_DIR));
+    ctx->setContextProperty(QStringLiteral("srcDir"), QStringLiteral(PBO_SOURCE_DIR));
     for (int i = 3; i < argc; ++i) {
         const QString kv = QString::fromLocal8Bit(argv[i]);
         const int eq = kv.indexOf(QLatin1Char('='));

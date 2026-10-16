@@ -69,7 +69,13 @@ real user data to the repository. All external input MUST be validated before us
   host after a redirect.
 - HTML mail MUST NOT be rendered by a web engine. It is converted to plain text or a small,
   fixed set of markup. Remote content (images, stylesheets, tracking pixels, fonts) MUST NOT be
-  loaded, and links are shown but never opened automatically.
+  loaded when a message is synced or opened, and links are shown but never opened automatically.
+  The owner's decision of 2026-10-16 allows exactly one exception: the user may load the remote
+  PICTURES of ONE message by an explicit tap on that message (never for all mail, never by a
+  setting, never at sync). The page MUST say beforehand that loading tells the sender the message
+  was read; only `https://`, one plain GET each, without credentials, cookies or referrer, bounded
+  in size and number, content judged by its first bytes, nothing else (no styles, fonts, frames).
+  Pictures that are parts of the message itself (`cid:`) are not remote content.
 - Attachments MUST be fetched only on demand, subject to a size limit, MUST be treated as untrusted
   data, and MUST NOT be executed or opened by anything other than a viewer the user chose.
 - Secrets (passwords, tokens) MUST NOT appear in logs, error messages shown to the user, or
@@ -209,4 +215,4 @@ Compliance is reviewed in every pull request and in a mandatory Constitution Che
 which lists each principle with pass, justified deviation or not applicable. Unjustified violations
 block the merge.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-13 | **Last Amended**: 2026-10-13
+**Version**: 1.1.0 | **Ratified**: 2026-10-13 | **Last Amended**: 2026-10-16

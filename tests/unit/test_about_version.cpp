@@ -1,8 +1,8 @@
 // About box (spec 003 FR-003): which version string the About screen shows.
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 #include "test_support.h"
 
-using pbnotes::about::display_version;
+using pbo::about::display_version;
 
 PB_TEST(empty_and_fallback_versions_show_as_unknown) {
     PB_CHECK_EQ(display_version(""), std::string("unknown"));

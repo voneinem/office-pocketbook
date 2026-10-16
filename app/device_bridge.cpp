@@ -1,20 +1,15 @@
 #include "device_bridge.h"
 
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QEvent>
-#include <QFileInfo>
 #include <QGuiApplication>
 #include <QInputMethod>
 #include <QKeyEvent>
 #include <QQuickWindow>
 #include <QScreen>
 #include <QTimer>
-#include <QUrl>
 
-#include "pbnotes/attachment_ref.h"
-#include "pbnotes/links.h"
-#include "pbnotes/log.h"
+#include "pbo/log.h"
 
 #ifdef PLATFORM_POCKETBOOK
 #include <inkview.h>
@@ -58,7 +53,7 @@ void DeviceBridge::rotateTo(int n) {
     QInputMethod* im = QGuiApplication::inputMethod();
     const bool reopen_keyboard = im && im->isVisible();
     if (reopen_keyboard) im->hide();  // otherwise the keyboard stays in the old orientation
-    pbnotes::log::event("rotate.begin", {pbnotes::log::count("orientation", n), pbnotes::log::count("keyboard_open", reopen_keyboard)});
+    pbo::log::event("rotate.begin", {pbo::log::count("orientation", n), pbo::log::count("keyboard_open", reopen_keyboard)});
     QTimer::singleShot(reopen_keyboard ? 350 : 0, this, [this, n, reopen_keyboard]() {
         SetOrientation(n);
         applied_ = n;
@@ -69,7 +64,7 @@ void DeviceBridge::rotateTo(int n) {
             QTimer::singleShot(reopen_keyboard ? 500 : 0, this, [this, reopen_keyboard]() {
                 if (reopen_keyboard) QGuiApplication::inputMethod()->show();
                 rotating_ = false;
-                pbnotes::log::event("rotate.done", {pbnotes::log::count("orientation", applied_)});
+                pbo::log::event("rotate.done", {pbo::log::count("orientation", applied_)});
             });
         });
     });
@@ -85,7 +80,7 @@ void DeviceBridge::updateQtGeometry() {
     QScreen* screen = QGuiApplication::primaryScreen();
     QObject* platform_screen = screen ? dynamic_cast<QObject*>(screen->handle()) : nullptr;
     if (!platform_screen || !QMetaObject::invokeMethod(platform_screen, "updateGeometry", Qt::DirectConnection))
-        pbnotes::log::event("rotate.geometry_failed", {});
+        pbo::log::event("rotate.geometry_failed", {});
 #endif
 }
 
@@ -105,7 +100,7 @@ int net_connect_done(int status) {  // InkView callback, possibly on another thr
 void DeviceBridge::finishConnect(bool ok) {
     if (!connecting_) return;
     connecting_ = false;
-    pbnotes::log::event("network.connect", {pbnotes::log::text("result", ok ? "connected" : "failed")});
+    pbo::log::event("network.connect", {pbo::log::text("result", ok ? "connected" : "failed")});
     emit networkResult(ok && wifiConnected());
 }
 
@@ -131,43 +126,6 @@ bool DeviceBridge::wifiConnected() const {
 #else
     return true;
 #endif
-}
-
-bool DeviceBridge::openUrl(const QString& url) {
-    const QByteArray bytes = url.toUtf8();
-    if (!pbnotes::is_followable_url(std::string(bytes.constData(), static_cast<size_t>(bytes.size())))) {
-        pbnotes::log::event("link.open", {pbnotes::log::text("result", "rejected")});
-        return false;
-    }
-#ifdef PLATFORM_POCKETBOOK
-    // The browser is started the way InkFeed does it (see NOTICE); the app stays alive in the background.
-    OpenBook(BROWSER_FOR_AUTH, bytes.constData(), 0);
-    const bool ok = true;
-#else
-    const bool ok = QDesktopServices::openUrl(QUrl::fromEncoded(bytes));
-#endif
-    pbnotes::log::event("link.open", {pbnotes::log::text("result", ok ? "started" : "failed")});
-    return ok;
-}
-
-bool DeviceBridge::openFile(const QString& path) {
-    const QFileInfo info(path);
-    const QString dir = QFileInfo(attachmentsDir_).canonicalFilePath();
-    const QString file = info.canonicalFilePath();  // resolves links and ".."; empty if the file does not exist
-    const bool inside = !dir.isEmpty() && !file.isEmpty() && file.startsWith(dir + QLatin1Char('/'));
-    const bool viewable = pbnotes::is_viewable_extension(pbnotes::safe_extension(file.toStdString()));
-    if (!inside || !viewable || !QFileInfo(file).isFile()) {
-        pbnotes::log::event("file.open", {pbnotes::log::text("result", "rejected")});
-        return false;
-    }
-#ifdef PLATFORM_POCKETBOOK
-    OpenBook(file.toUtf8().constData(), "", 0);  // the reader application picks the viewer by file type
-    const bool ok = true;
-#else
-    const bool ok = QDesktopServices::openUrl(QUrl::fromLocalFile(file));
-#endif
-    pbnotes::log::event("file.open", {pbnotes::log::text("result", ok ? "started" : "failed")});
-    return ok;
 }
 
 void DeviceBridge::quit() {

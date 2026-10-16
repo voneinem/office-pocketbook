@@ -128,6 +128,8 @@ QtObject {
         property string copyright: "Copyright (c) 2026 A. Author"
         property string licenseName: "MIT License"
         property int unreadableEntries: 0
+        property string tzRelease: "2026c"
+        function credentialState() { return "enforced" }
         property var components: [
             { id: "alpha", name: "Alpha", purpose: "A library", license: "MIT License", origin: "bundled" },
             { id: "beta", name: "Beta", purpose: "A font", license: "SIL OFL 1.1", origin: "device" },

@@ -1,14 +1,14 @@
 #pragma once
 // Read-only data of the About screens (spec 003, contracts/qml-bridge.md): the app's name, version, author
-// and license, read from licenses/manifest.txt. Thin: parsing and validation are in notes_core. Writes nothing,
-// opens no network connection, and does not touch the notes store.
+// and license, read from licenses/manifest.txt. Thin: parsing and validation are in office_core. Writes nothing,
+// opens no network connection, and does not touch the store.
 
 #include <QObject>
 #include <QString>
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 
 class AboutBridge : public QObject {
     Q_OBJECT
@@ -26,11 +26,15 @@ class AboutBridge : public QObject {
     Q_PROPERTY(QVariantList components READ components CONSTANT)
     // Manifest blocks that could not be used; the list page then says "N entries could not be read.".
     Q_PROPERTY(int unreadableEntries READ unreadableEntries CONSTANT)
+    // the release of the bundled time zone data, e.g. "2026c" ("" = unknown)
+    Q_PROPERTY(QString tzRelease READ tzRelease CONSTANT)
 
 public:
     struct Config {
         QString licensesRoot;  // directory that contains licenses/manifest.txt and the texts
-        QString version;       // the version the build identifies itself with (pbnotes::version())
+        QString version;       // the version the build identifies itself with (pbo::version())
+        QString dataDir;       // the data folder: the state of the password file is measured there
+        QString tzRelease;     // the release of the bundled time zone data ("2026c"; "" = unknown)
     };
 
     explicit AboutBridge(Config config, QObject* parent = nullptr);
@@ -43,6 +47,9 @@ public:
     bool infoAvailable() const;
     QVariantList components() const;
     int unreadableEntries() const;
+    QString tzRelease() const { return config_.tzRelease; }
+    // How the password file is protected on this storage, measured now: "enforced" | "not_enforced" | "unknown" (no file yet or no answer).
+    Q_INVOKABLE QString credentialState() const;
 
     // The page content of the app's license: {title, header (list of "Label: value"), paragraphs, available}.
     // Reads the text file(s) now; never throws; a text that cannot be read gives one explanatory paragraph.
@@ -52,10 +59,10 @@ public:
     Q_INVOKABLE QVariantMap componentDetail(const QString& id) const;
 
 private:
-    QVariantMap pageFor(const pbnotes::about::Entry& entry, const QStringList& header) const;
-    const pbnotes::about::Manifest& manifest() const;  // loaded on first use, then cached
+    QVariantMap pageFor(const pbo::about::Entry& entry, const QStringList& header) const;
+    const pbo::about::Manifest& manifest() const;  // loaded on first use, then cached
 
     Config config_;
     mutable bool loaded_ = false;
-    mutable pbnotes::about::Manifest manifest_;
+    mutable pbo::about::Manifest manifest_;
 };

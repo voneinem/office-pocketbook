@@ -7,7 +7,7 @@
 # Rules, applied to every file below the directory:
 #   - every host in an http(s) URL must be example.com, example.org, localhost, 127.0.0.1,
 #     or a subdomain of example.com / example.org / *.invalid;
-#   - every e-mail address must be @example.com (or a subdomain);
+#   - every e-mail address must be at example.com, example.org or example.net (or a subdomain; RFC 2606);
 #   - no "Authorization" header or value may appear.
 # See tests/fixtures/README.md for the anonymization procedure.
 set -u
@@ -20,18 +20,18 @@ check_dir() {
         while IFS= read -r host; do
             [ -z "$host" ] && continue
             case "$host" in
-                example.com|*.example.com|example.org|*.example.org|localhost|127.0.0.1|*.invalid) ;;
+                example.com|*.example.com|example.org|*.example.org|example.net|*.example.net|localhost|127.0.0.1|*.invalid) ;;
                 *) echo "$f: non-anonymized host '$host'" >&2; bad=1 ;;
             esac
-        done < <(grep -oiE 'https?://[A-Za-z0-9._-]+' "$f" | sed -E 's#^https?://##' | tr 'A-Z' 'a-z' | sort -u)
+        done < <(grep -aoiE 'https?://[A-Za-z0-9._-]+' "$f" | sed -E 's#^https?://##' | tr 'A-Z' 'a-z' | sort -u)
         while IFS= read -r mail; do
             [ -z "$mail" ] && continue
             case "$mail" in
-                *@example.com|*@*.example.com) ;;
+                *@example.com|*@*.example.com|*@example.org|*@*.example.org|*@example.net|*@*.example.net) ;;
                 *) echo "$f: non-anonymized e-mail address '$mail'" >&2; bad=1 ;;
             esac
-        done < <(grep -oE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$f" | tr 'A-Z' 'a-z' | sort -u)
-        if grep -qi 'authorization' "$f"; then
+        done < <(grep -aoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$f" | tr 'A-Z' 'a-z' | sort -u)
+        if grep -aqi 'authorization' "$f"; then
             echo "$f: contains an Authorization value" >&2
             bad=1
         fi

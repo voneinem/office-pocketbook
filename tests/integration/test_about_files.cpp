@@ -5,14 +5,14 @@
 #include <fstream>
 #include <string>
 
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 #include "test_support.h"
 
-using namespace pbnotes::about;
+using namespace pbo::about;
 
 namespace {
 
-const std::string kRoot = PBNOTES_SOURCE_DIR;
+const std::string kRoot = PBO_SOURCE_DIR;
 
 long file_size(const std::string& path) {
     struct stat st;
@@ -26,7 +26,7 @@ PB_TEST(real_manifest_parses_without_bad_blocks) {
     PB_CHECK(m.readable);
     PB_CHECK(m.app.has_value());
     PB_CHECK_EQ(m.bad_blocks, 0);
-    PB_CHECK_EQ(m.components.size(), size_t(10));
+    PB_CHECK_EQ(m.components.size(), size_t(11));
 }
 
 PB_TEST(app_block_names_the_author_and_the_license_file) {
@@ -61,8 +61,9 @@ PB_TEST(every_component_has_an_origin_a_purpose_and_an_address) {
         PB_CHECK(e.url.compare(0, 8, "https://") == 0);
         (e.origin == Origin::Bundled ? bundled : system)++;
     }
-    PB_CHECK_EQ(bundled, 4);
-    PB_CHECK_EQ(system, 6);
+    // bundled: InkFeed, the CA bundle, SQLite, the time zone data, the emoji font and libcurl (carried statically, scripts/build-curl-arm.sh)
+    PB_CHECK_EQ(bundled, 6);
+    PB_CHECK_EQ(system, 5);
 }
 
 PB_TEST_MAIN()

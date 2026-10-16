@@ -4,7 +4,7 @@ build-*/
 dist/
 
 # Local runtime data of the desktop build
-pbnotes-data/
+pboffice-data/
 
 # Database backups (may contain the account password)
 *.bak
@@ -16,3 +16,6 @@ pbnotes-data/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Static libcurl for the reader, built by scripts/build-curl-arm.sh
+build-curl-arm/

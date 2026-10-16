@@ -1,112 +1,103 @@
-# Security review (host-testable core)
+# Security review of PB Office (mail and calendar)
 
-Date: 2026-10-10. Scope: the Qt-free core library (`core/`), its build and test tooling, and the
-repository. The Qt UI and the device behavior are NOT covered yet: they depend on the manual device
-gates (tasks T114, T118, T021, T042) and are listed under "Open items".
+Date: 2026-10-16. Scope: the core library (`core/`), the Qt bridge (`bridge/`), the QML pages (`qml/`), the
+app (`app/`), the build and test tooling and the repository, for the feature `001-email-calendar-mvp`.
+Every claim names the automated test or the repeatable command that backs it. Run everything with
+`scripts/pre-merge.sh`.
 
-Method: every claim below is backed by an automated test or a repeatable command; the command or
-test name is given. Run everything with `scripts/pre-merge.sh`.
+**What this review is not.** All servers in the tests are fakes (`tests/support/fake_*_server.h`).
+Nothing here has been checked against a real mail or calendar provider, and the device behaviour (file
+permissions on the FAT storage, Wi-Fi API, battery pull) is listed under "Open items". A claim that rests
+on a fake server is labelled "fake server".
 
-## 1. TLS and credentials (constitution Principle III)
-
-| Requirement | Evidence |
-|-------------|----------|
-| Certificates are always verified (peer and host name); no switch can turn this off | `core/src/curl_transport.cpp` sets `VERIFYPEER=1`, `VERIFYHOST=2`; `scripts/check-constitution.sh` (rule R1) fails the build on `curl -k`, `--insecure`, `--no-check-certificate`, and on `VERIFYPEER/VERIFYHOST/VERIFYSTATUS` (also the `PROXY_` and `DOH_` variants) set to 0/false or `VERIFYHOST` set to 1; its self-test proves each pattern is detected |
-| A self-signed server certificate is refused and no credentials are sent | `test_tls_verification` (server received 0 requests, no `Authorization` header) |
-| An expired certificate and a wrong host name are refused | `test_tls_cert_failures` (both signed by a CA the client trusts) |
-| Credentials are not forwarded to another host/port on a redirect; a redirect to `http://` is refused | `test_redirect_credentials` (the redirect target saw no `Authorization` header and no connection) |
-| Only `https://` URLs are accepted, also for redirects; credentials never in URLs | `test_connection_test` (URL normalization), `test_tls_verification` (plain `http://` refused before any connection), `CURLOPT_PROTOCOLS_STR`/`REDIR_PROTOCOLS_STR` = `https` |
-| Trust anchors: device store when usable, else the bundled CA file; a user-supplied `custom-ca.pem` only extends them | `test_ca_selector`, `test_effective_ca`, `test_private_ca` (a private CA works only for the CA in the file; a different CA does not help; a wrong host name is still refused with the custom CA loaded; a self-signed server certificate placed in the file is accepted) |
-| An invalid custom CA file is ignored, never weakens verification | `test_effective_ca` (empty, unreadable, over 1 MB, non-PEM, malformed base64, not DER, unterminated) |
-
-Residual points: (a) libcurl's compiled-in default CA directory is not disabled; on the device this
-is the SDK's `/etc/ssl/certs`, whose real content is unknown (open item O1). (b) Minimum TLS version
-is 1.2.
-
-## 2. Secrets and personal data
+## 1. Transport security (constitution Principle III)
 
 | Requirement | Evidence |
 |-------------|----------|
-| No secrets or real user data in the repository | `scripts/pre-merge.sh --secrets` (built-in patterns for private keys, Basic auth values, hard-coded password/token assignments; `gitleaks` is used instead when installed); fixtures are checked by `scripts/check-fixtures.sh` (only `example.com`/`example.org`/`localhost` hosts, `@example.com` addresses, no `Authorization` values) |
-| No absolute local paths in tracked files | `scripts/check-constitution.sh` rule R5. Older commits still contain such paths in their history (see O4) |
-| Logs contain no passwords, user names, note text or titles | `test_log` (name-based redaction, newline injection), rule R4 of `check-constitution.sh`, and `test_account_store` (the password never reaches the logger) |
-| "Forget account" leaves no trace of the password | `test_account_store`: after forgetting or changing the password, the old password string is found nowhere in the database file, its journal, or `pbnotes.db.bak` (`secure_delete=ON`, the backup is removed after a successful migration) |
-| The password is stored unencrypted | By design and documented in `README.md` and (for the UI) the setup screen text. Anyone with access to the device's USB storage can read it; use an app password. No OS keystore exists on the device (to be confirmed on the device, O2) |
+| TLS is verified (peer and host name) on every connection; no switch turns it off | `core/src/curl_session.cpp` sets `VERIFYPEER=1`, `VERIFYHOST=2`; `scripts/check-constitution.sh` rule R1 fails on `curl -k`, `--insecure`, `--no-check-certificate`, on any `VERIFY*` option set to 0/false or `VERIFYHOST` set to 1; its `--self-test` (CTest `check_constitution_selftest`) proves each pattern is detected |
+| No connection without TLS: IMAP/SMTP only with implicit TLS or an enforced STARTTLS; no plain-text fallback | rule R7 (`CURLOPT_USE_SSL` only `CURLUSESSL_ALL`; the literal `imap://` and `smtp://` only in `curl_session.cpp`); `test_imap_tls_failures` (STARTTLS refused by the server: error, and no password is sent in the clear; a server that disables LOGIN without TLS gets nothing; implicit TLS against a plain-text server: error without a password); `test_smtp_injection` (`tls_problems_are_certain_failures_and_no_credentials_leave_the_device`) — fake servers |
+| An expired certificate, a wrong host name, an unknown or a self-signed authority are refused before any credential is sent | IMAP: `test_imap_tls_failures`; HTTP (CalDAV, feed): `test_tls_verification`, `test_tls_cert_failures`; SMTP: `test_smtp_injection` — each asserts that the server saw no `LOGIN`, `AUTH` or `Authorization` |
+| A redirect never forwards credentials to another host and never goes to plain `http://` | `test_redirect_credentials`; `CURLOPT_PROTOCOLS_STR` / `REDIR_PROTOCOLS_STR` allow `https` only |
+| Trust anchors: the device store when usable, else the bundled CA file; a user-supplied `custom-ca.pem` only extends them; Settings says whether it is loaded | `test_ca_selector`, `test_effective_ca` (a broken, empty, oversized or non-PEM file is ignored), `test_private_ca` (a private CA works for HTTP and for IMAP only with the file; a different CA does not help; a wrong host name is still refused with the custom CA loaded; a broken custom file opens no way around the check), `test_settings_bridge` (`settings_report_the_custom_certificate_authority`) |
+| libcurl tracing is never on (it would write `LOGIN` and `AUTH PLAIN` passwords to the log) | rule R10 |
+| The mail client never opens a link and loads no remote content by itself; the pictures of ONE message are loaded only on the user's tap (constitution 1.1.0, FR-009) | `test_reader_no_remote` (an HTML message with remote content opens as text and nothing is fetched), `test_image_load` (`remote_pictures_are_not_loaded_by_the_sync_and_only_by_the_tap`: the sync makes no request; a tap makes one plain GET per picture over https, no credentials, cookie or referrer; what is not a picture by its first bytes is not kept; size and number are bounded; a failed one is asked for again only by another tap), `test_html_text` (only `cid:` and `https:` sources are listed; `http:`, `data:`, `file:`, relative and script addresses, addresses with credentials and tracking pixels are not), `test_reader_bridge` (opening a message loads nothing); rules U5 and U6 of `scripts/check-ui-style.sh` (no WebView/WebEngine import, no `Qt.openUrlExternally`). The page says before the tap that the sender is told |
 
-## 3. Input validation
+Residual points: (a) libcurl's compiled-in default CA directory is not disabled; on the device this is
+the SDK's `/etc/ssl/certs`, whose content was not inspected (O1). (b) The minimum TLS version is 1.2.
+(c) libcurl 8.18 is bundled for the ARM build (`scripts/build-curl-arm.sh`); its updates are the owner's
+to follow.
 
-- Server responses: `core/src/json.cpp` is a strict whole-document parser (`test_json`: malformed
-  documents, lone surrogates, control characters, nesting depth); the API client rejects wrong types
-  and never returns partial results (`test_api_list`, `test_api_capabilities`).
-- Imports/files: the custom CA file is size-limited and structurally validated (section 1).
-- User input: URL normalization rejects credentials, queries, fragments, spaces and non-https
-  schemes; categories are validated (length, spaces, control characters, UTF-8) and rejected
-  values never replace the stored one (`test_category_validation`).
-- SQL: all statements are prepared with bound parameters; search is done in application code, so
-  `%`, `_` and quotes are literal (`test_store_search`).
+## 2. Credentials, secrets and personal data
+
+| Requirement | Evidence |
+|-------------|----------|
+| Passwords are kept as plain text in `credentials` with the strictest permissions the storage allows, written atomically; the protection is MEASURED after saving and shown on the setup page and in About (FR-004) | `test_credentials_file` (private whatever the umask; no temp file left; a group-readable file is reported as `not_enforced`; atomic replace; `forget` overwrites then unlinks), `test_about_bridge` (`the_password_file_state_is_measured_and_always_comes_with_the_advice`), `AccountSetupPage.qml` / `AboutPage.qml` texts |
+| The storage on the reader (FAT) probably cannot enforce permissions | UNVERIFIED on the device (O2); the app says so plainly and recommends app-specific passwords in both states |
+| Passwords never reach the log, an error message or the database | `test_credentials_file` (`passwords_never_reach_the_log`), `test_log`; rule R4; `Store` has no password column |
+| Logs hold no addresses, subjects, folder names, host names, file names or paths | `test_log` (name-based redaction, newline injection, the list of event codes equals the sources), rules R4, R6, R8; log codes are listed in `core/src/log_codes.h` |
+| No secrets or real user data in the repository | `scripts/pre-merge.sh --secrets` (private keys, Basic auth values, hard-coded password/token assignments; `gitleaks` when installed), `scripts/check-fixtures.sh` (only `example.com`, `example.org`, `localhost`) |
+| No absolute local paths in tracked files | rule R5 |
+| Nothing leaves the device except to the servers the user configured; no telemetry, no update check | no code path other than the IMAP, SMTP, CalDAV and feed transports opens a socket; `test_idle_no_network` (after the automatic sync of a change the servers see nothing more; with Auto Sync off nothing is sent until the user syncs) — fake servers |
+
+## 3. Untrusted input
+
+All of it comes from the network, from other people's mail and calendars.
+
+| Input | Evidence |
+|-------|----------|
+| IMAP responses | `test_malformed_imap` (cut at every offset, byte flips, random bytes, deep nesting, huge counts and literals, a hostile mailbox name cannot inject a command) |
+| Mail (MIME, headers, charsets, HTML) | `test_malformed_mail` (at least 50 malformed files, truncation at every offset, size and nesting bombs), `test_mime_parse`, `test_mime_headers`, `test_charset`, `test_html_text` (HTML becomes text: script and style are skipped, images are never loaded, only their alt text is shown, links become numbered text) |
+| Calendar data (iCalendar) | `test_malformed_ical` (at least 20 malformed files, mutations, huge input bounded), `test_ical_parse`, `test_rrule`, `test_occurrences_golden` |
+| CalDAV XML | `test_malformed_xml` (hostile constructs such as entities are refused; huge input refused quickly; mutations of a real answer) |
+| Header and command injection in what the app sends | `test_smtp_injection`, `test_compose` (line breaks in subject, names and addresses cannot add headers or recipients), `test_malformed_imap` (mailbox names) |
+| Attachment names and sizes | `test_attachment_fetch`: names from the network are made safe, an existing file is never overwritten (the new one gets a number), a size over the limit is refused without fetching, a part larger than announced is aborted and leaves no file |
+| SQL | every statement is prepared with bound parameters; search input is literal (`test_search`) |
+
+Attachments are saved as they are, with their real name, in `/mnt/ext1/Downloads`; the app never opens or
+runs them and never deletes them.
 
 ## 4. Data safety (constitution Principle VI)
 
-- Writes send `If-Match` (`test_api_write`); deletes check first with a conditional GET and never
-  delete a note that changed on the server (`test_api_delete`, `test_sync_delete_edit`).
-- A conflict keeps both versions: the server version stays the original, the local text becomes an
-  uploaded conflict copy (`test_sync_conflict`). The resolution is one transaction that inserts and
-  verifies the copy before replacing the original; a failure injected at every statement leaves the
-  complete before or after state (`test_conflict_atomic`).
-- A dropped request or a lost response at every point of a sync loses nothing and corrupts nothing
-  (`test_sync_robustness`); a note edited while its push is in flight stays pending.
-- Known limitation: if the server creates a note but the response never arrives, the next sync
-  creates it again, so it can exist twice with identical text (spec FR-029, research R-8).
+| Requirement | Evidence |
+|-------------|----------|
+| A message of unknown send outcome is never sent again by the app | `test_no_double_send` (`an_unknown_outcome_becomes_uncertain_and_is_never_resent_by_a_sync`, `the_matrix_of_injection_points_never_produces_a_duplicate`), `test_draft_autosave_kill` (killed while sending: never accepted twice), `test_kill_matrix` |
+| A draft is deleted on the server only after the new copy is confirmed; no bare `EXPUNGE` ever | `test_draft_mirror`, `test_mail_push`, `test_move_variants` (the command log of the fake server contains `UID EXPUNGE <uid>` only; in `core/` the word EXPUNGE appears in the response parser and nowhere as a command: `grep -rn EXPUNGE core/src`) |
+| A server folder that was reset (`UIDVALIDITY`) gets no UID-addressed command | `test_uidvalidity_reset`, `test_draft_mirror`, `test_mail_push` |
+| Nothing the user changed is lost to a sync, an eviction or a shorter window | `test_store_eviction`, `test_eviction_sync`, `test_window_change` (messages with a pending change or an error, drafts, the outbox and events with local work are never removed), `test_store_organize` |
+| Event edits: `If-Match` on every write; a delete never removes a version that changed on the server; a conflict keeps both | `test_event_push`, `test_event_conflict`, `test_event_server_deleted`, `test_readonly_calendar` (fake CalDAV server) |
+| Killing the app (SIGKILL, like a battery pull) at random moments loses nothing and corrupts nothing | `test_draft_autosave_kill` (autosave; the outbox; sending), `test_event_edit_kill`, `test_kill_matrix` (one whole sync: send, Sent copy, draft mirror, flag push, pull; 100 kills; afterwards the store passes its integrity check, no draft or queued message is lost, none is accepted twice, the next sync finishes the rest once). The real battery pull on the reader is a device item (T137, T186) |
+| Storage nearly full never corrupts data | `test_store_eviction`, `test_eviction_sync`; writes that fail return an error and keep the earlier state (`Store` transactions) |
+| Local changes that wait for the server are visible | `message_list`/`reader` marks "not synced", event marks, the "To decide" page; QML tests in the skeleton and calendar flows |
 
-## 5. Findings during implementation
+## 5. Things that need the owner's eyes
+
+- Links are text only (FR-009); the app has no way to open one.
+- The clock check (FR "device clock wrong") compares the reader's clock with the HTTP `Date` header of the
+  calendar server and with the `INTERNALDATE` the mail server stamps on a message the app has just
+  appended (`test_clock_skew_caldav`, `test_clock_skew_imap`). Both are fake servers.
+- The language of the interface can be German; the text comes from `qml/strings_de.tsv`. A wrong or missing
+  entry shows the English text; no text is ever executed or interpreted as markup (`scripts/extract-strings.py
+  --check`, CTest `check_translations`).
+
+## 6. Findings during implementation
 
 | # | Finding | Resolution |
 |---|---------|------------|
-| 1 | The first TLS test run recorded a zero-byte "request" for the refused self-signed case | A test-harness artifact (TLS 1.3 lets the server finish before the client's rejection arrives); the harness now counts it as an aborted handshake. No request was ever sent |
-| 2 | The spec said the conflict copy equals the local text byte-for-byte while the title gets a conflict marker | Reconciled: the copy equals the local text except for the marker on its title line; wording fixed in spec artifacts and tasks |
-| 3 | The fake server's note ids started at 100 while tests assumed 1 | Test fixture fixed |
+| 1 | Sending a message started a sync at once even with Auto Sync off, and never switched Wi-Fi on | Found 2026-10-16 while reviewing the Auto Sync rules; fixed: the Compose page calls `sync.noteChange`; `test_send_with_auto_sync_off_waits_for_the_sync_button`, `test_saving_a_draft_never_starts_a_sync` |
+| 2 | Tapping a day in the Month view did not open the day (the grid is rebuilt by the first call and its delegate loses the context) | Found on the reader's own log (`ReferenceError: dayModel is not defined`); fixed and covered by `test_tapping_a_day_in_the_month_selects_it_for_the_day_page` |
+| 3 | A shorter "days of mail kept" removed nothing | Spec US6 scenario 4 asks for removal; `Store::trim_to_window` after the pull, only when the window was shortened, never for local work; `test_window_change` |
+| 4 | The newsletter of the owner's screenshot (HTML with pictures on the sender's server) showed as text with `[alt]` marks only | Owner decision 2026-10-16: show `cid:` pictures at once, remote ones on a tap per message, long links shortened; constitution 1.1.0, FR-009 amended; `test_html_text`, `test_mime_images`, `test_store_images`, `test_image_load`, `test_reader_bridge`, QML `test_html_picture_mail_…` |
+| 5 | The host app was run once against a copy of the reader's database and contacted the real mail server with an empty password (one refused login) | Not repeated; the rule is in the working notes: never run the host app on a copy of the reader's data |
 
-## 6. Open items
+## 7. Open items
 
-- **O1** Device CA store, Qt runtime version and Wi-Fi API semantics: run `scripts/probe-device.sh` and
-  the Hello World gate on the InkPad (T021, T114).
-- **O2** Whether the device offers any keystore or restricted file permissions for the database.
-- **O3** Behavior of a real Nextcloud server for `If-Match` on `PUT`/`DELETE`, title derivation and
-  `pruneBefore` (T022); until then fixtures are marked `.unverified.json`.
-- **O4** Commits made before the path clean-up contain local absolute paths in their history. Rewrite
-  the history before the first public push if that matters.
+- **O1** The device CA store and the Qt runtime of the reader were probed only partly (`docs/device-findings.md`).
+- **O2** Whether the reader's storage honours file permissions for `credentials` (the app measures it and
+  says what it finds; the finding on the real device is in `docs/device-test-checklist.md`, item DT-SEC-1).
+- **O3** Everything marked "fake server" is unverified against real Gmail, Outlook.com, iCloud, generic
+  IMAP/SMTP, Nextcloud and OpenCloud (`docs/live-server-checklist.md`).
+- **O4** Commits made before the clean-up of the baseline may contain local absolute paths in their
+  history. Rewrite the history before the first public push if that matters.
 - **O5** `gitleaks` is not installed on the development machine; the built-in scan is weaker.
-- **O6** The Qt UI (bridge, QML pages, device build of the full app) has not been implemented or
-  reviewed yet.
-
-## 5. Rich note content (feature 002: links, tables, emojis, attachments)
-
-Date: 2026-10-11. Scope: the new Qt-free core code, the bridge and the device glue. Everything below that says
-"device" is not yet verified on the reader (tasks T018, T027, T036, T061, T077, T083).
-
-| Concern | What was checked | Evidence |
-|---------|------------------|----------|
-| Attachment references from notes and from the server are hostile input | A reference is used only if, after percent-decoding each segment, it is non-empty, at most 1,024 bytes, has no NUL, control character or backslash, no scheme, no leading `/` and a non-empty file name; a bad or truncated escape and a decoded `/` inside a segment fail. The server's `filename` answer goes through the same validation | `test_attachment_ref`, `test_markdown_attachments`, `test_api_attachment_upload` (invalid answers are `rejected`) |
-| No local path is built from a note or server string | Local files are `<row id>` or `<row id>.<[a-z0-9]{1,8}>` only; `record_downloaded` and `set_staged_file` refuse any other name; the image provider only opens such names; the janitor only deletes such names (and `*.part`) | `test_store_attachments` (`local_file_is_an_id_with_a_safe_extension_or_nothing`), `test_sync_attachments` (`the_remote_path_never_becomes_a_local_path`, the janitor test), `test_attachment_image_provider` |
-| Links: only `http`/`https` are ever opened | `is_followable_url` (scheme, host, no blanks/control characters, 2,048 bytes) is applied in the parser and again in `DeviceBridge::openUrl` before `OpenBook`; the UI receives link indexes (`l<N>`), never raw addresses in markup | `test_links`, `test_markdown_links`, `test_reader_blocks` |
-| The viewer hand-off cannot be pointed at other files | `DeviceBridge::openFile` accepts only a regular file whose canonical path is inside the attachment folder (a link that leaves it is rejected) and whose extension is on the allow-list | code review; device check T061 |
-| Credentials on attachment requests | Same transport as notes: TLS verification always on, `https` only, credentials not forwarded to another host, no redirect to `http`; checked for downloads, HEAD and multipart uploads | `test_attachment_transport`, `test_attachment_upload_transport` |
-| Size limits | 10 MiB for download (header and running total), add (before and while copying) and upload (before sending); a body over the limit leaves no file | `test_attachment_transport`, `test_api_attachments`, `test_attachment_service_add`, `test_api_attachment_upload` |
-| Decompression bombs | An image of more than 40 million pixels is refused before decoding (Qt's own allocation limit applies as well); decoding is scaled and runs off the UI thread | `test_attachment_image_provider` |
-| File browser previews (spec 009) read only what the browser listed | `image://filepreview/<id>` takes an integer id the latest folder listing handed out (regular, readable files with an image extension); the provider has no way to be given a path, an id of an earlier listing resolves to nothing, a file that turned into a pipe or device is not opened, and the 40 million pixel guard of the attachment decoder applies. Decoding is scaled, runs on one private worker thread, results are kept only in memory (8 MB, least recently used out first) and nothing is written to the card; log lines carry no name or path | `test_file_preview_provider`, `test_attachments_bridge` (`only_regular_readable_image_files_are_marked_as_images_and_given_a_preview_id`) |
-| Hostile text makes the parser slow | A line longer than 16,384 bytes is shown as plain text, so many unmatched openers cannot make the inline parser quadratic | `test_perf_read` (`hostile_lines_are_parsed_in_linear_time`) |
-| The user's own files | The add flow only reads the source (hash and modification time unchanged); the janitor never deletes a name this app does not create | `test_attachment_service_add`, `test_sync_attachments` |
-| Logs | Only result words, counts and error classes: no address, file name or path; rule R6 of `check-constitution.sh` rejects log keys named like `url`, `path`, `file`, `name`, `address` (self-tested) | `check_constitution`, `check_constitution_selftest` |
-| Data safety (Principle VI) | The note text is the source of truth; a file reaches the server before any reference to it; a failed or interrupted upload leaves the token in the local text and sends the text without it; the staged-to-pending binding and the token rewrite are single transactions (failure injection); a conflict copy keeps or duplicates its attachments | `test_store_attachments_staging`, `test_sync_attachments_push` |
-
-Accepted risks and open items:
-
-- The attachment folder is a normal folder on the device's FAT partition: no file permissions exist there, so
-  anyone with USB access can read downloaded attachments (the same as the notes database).
-- The file picker shows the whole storage: a user who deliberately attaches the app's own database would upload
-  the stored app password into a note. This is a user action, not something the app does by itself.
-- A decoder bug in the device's Qt image plugins cannot be ruled out; the formats the device supports are logged
-  at start (`image.formats`) and unsupported ones fall back to a file entry.
-- Not verified against a real server: the exact answers of the attachment endpoints (HEAD length, upload name,
-  error statuses); the fixtures are `.unverified` until probe T005 is done.
-
+- **O6** The performance budgets (cold start, page turn, first sync of 500 messages) are measured on the
+  host only; the reader figures are device items.

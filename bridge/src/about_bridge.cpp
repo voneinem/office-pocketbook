@@ -1,19 +1,20 @@
 #include "about_bridge.h"
 
-#include "pbnotes/log.h"
+#include "pbo/credentials_file.h"
+#include "pbo/log.h"
 
 namespace {
 // Shown when the manifest has no app block; the name is part of the build, not of the data.
-const char* kFallbackName = "Notes Pocketbook";
+const char* kFallbackName = "PB Office";
 }  // namespace
 
 AboutBridge::AboutBridge(Config config, QObject* parent) : QObject(parent), config_(std::move(config)) {}
 
-const pbnotes::about::Manifest& AboutBridge::manifest() const {
+const pbo::about::Manifest& AboutBridge::manifest() const {
     if (!loaded_) {
-        manifest_ = pbnotes::about::load_manifest(config_.licensesRoot.toStdString());
+        manifest_ = pbo::about::load_manifest(config_.licensesRoot.toStdString());
         loaded_ = true;
-        pbnotes::log::event("about.opened", {});
+        pbo::log::event("about.opened", {});
     }
     return manifest_;
 }
@@ -24,7 +25,7 @@ QString AboutBridge::appName() const {
 }
 
 QString AboutBridge::version() const {
-    return QString::fromStdString(pbnotes::about::display_version(config_.version.toStdString()));
+    return QString::fromStdString(pbo::about::display_version(config_.version.toStdString()));
 }
 
 QString AboutBridge::author() const {
@@ -42,7 +43,7 @@ QString AboutBridge::licenseName() const {
     return m.app ? QString::fromStdString(m.app->license) : QString();
 }
 
-QVariantMap AboutBridge::pageFor(const pbnotes::about::Entry& entry, const QStringList& header) const {
+QVariantMap AboutBridge::pageFor(const pbo::about::Entry& entry, const QStringList& header) const {
     QVariantMap page;
     page.insert(QStringLiteral("title"), QString::fromStdString(entry.name));
     page.insert(QStringLiteral("header"), header);
@@ -53,7 +54,7 @@ QVariantMap AboutBridge::pageFor(const pbnotes::about::Entry& entry, const QStri
                     QStringList{QStringLiteral("The full license text is published at %1.").arg(QString::fromStdString(entry.url))});
         return page;
     }
-    const pbnotes::about::LicenseText text = pbnotes::about::load_text(config_.licensesRoot.toStdString(), entry);
+    const pbo::about::LicenseText text = pbo::about::load_text(config_.licensesRoot.toStdString(), entry);
     QStringList paragraphs;
     for (const std::string& p : text.paragraphs) paragraphs << QString::fromStdString(p);
     if (!text.available) paragraphs = QStringList{QStringLiteral("The license text could not be read.")};
@@ -80,7 +81,7 @@ QVariantMap AboutBridge::appLicense() const {
 
 QVariantList AboutBridge::components() const {
     QVariantList list;
-    using pbnotes::about::Origin;
+    using pbo::about::Origin;
     for (Origin origin : {Origin::Bundled, Origin::System}) {
         for (const auto& c : manifest().components) {
             if (c.origin != origin) continue;
@@ -104,7 +105,7 @@ QVariantMap AboutBridge::componentDetail(const QString& id) const {
         QStringList header;
         header << QStringLiteral("Holder: %1").arg(QString::fromStdString(c.holder))
                << QStringLiteral("License: %1").arg(QString::fromStdString(c.license))
-               << QStringLiteral("Origin: %1").arg(c.origin == pbnotes::about::Origin::Bundled ? QStringLiteral("In the app package")
+               << QStringLiteral("Origin: %1").arg(c.origin == pbo::about::Origin::Bundled ? QStringLiteral("In the app package")
                                                                                              : QStringLiteral("Provided by the reader"))
                << QStringLiteral("Address: %1").arg(QString::fromStdString(c.url))
                << QStringLiteral("Purpose: %1").arg(QString::fromStdString(c.purpose));
@@ -114,3 +115,11 @@ QVariantMap AboutBridge::componentDetail(const QString& id) const {
 }
 
 bool AboutBridge::infoAvailable() const { return manifest().app.has_value(); }
+
+QString AboutBridge::credentialState() const {
+    switch (pbo::credentials_protection(config_.dataDir.toStdString())) {
+        case pbo::ProtectionStatus::Enforced: return QStringLiteral("enforced");
+        case pbo::ProtectionStatus::NotEnforced: return QStringLiteral("not_enforced");
+        default: return QStringLiteral("unknown");
+    }
+}

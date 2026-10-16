@@ -70,7 +70,16 @@ inline int run_all() {
     return 0;
 }
 
+// Every test that runs against an in-process fake server (tests/support/fake_*_server.h) says so once at start:
+// what it proves is the app against the harness, not against a real server (constitution Principle IX).
+// Use as `PBO_FAKE_SERVER_TEST();` at namespace scope; scripts/check-fake-markers.sh enforces it.
+struct FakeServerBanner {
+    FakeServerBanner() { std::printf("UNVERIFIED against real servers (fake server)\n"); }
+};
+
 }  // namespace pbtest
+
+#define PBO_FAKE_SERVER_TEST() static const ::pbtest::FakeServerBanner pbtest_fake_server_banner
 
 #define PB_TEST(name)                                                    \
     static void name();                                                  \

@@ -1,6 +1,4 @@
 singleton Style 1.0 Style.qml
-AttachmentView 1.0 AttachmentView.qml
-BlockText 1.0 BlockText.qml
 ChoiceDialog 1.0 ChoiceDialog.qml
 ConfirmDialog 1.0 ConfirmDialog.qml
 DateTimePicker 1.0 DateTimePicker.qml
@@ -9,11 +7,7 @@ PageButtons 1.0 PageButtons.qml
 SelectableText 1.0 SelectableText.qml
 SelectionHandle 1.0 SelectionHandle.qml
 SelectionHandles 1.0 SelectionHandles.qml
-SelectionMenu 1.0 SelectionMenu.qml
-SlashMenu 1.0 SlashMenu.qml
-TableRowView 1.0 TableRowView.qml
 TextEntryDialog 1.0 TextEntryDialog.qml
-TitleBlock 1.0 TitleBlock.qml
 Icon 1.0 Icon.qml
 IconButton 1.0 IconButton.qml
 RowDivider 1.0 RowDivider.qml
@@ -28,3 +22,8 @@ BottomPanel 1.0 BottomPanel.qml
 InkSlider 1.0 InkSlider.qml
 InkSwitch 1.0 InkSwitch.qml
 InkRow 1.0 InkRow.qml
+ModelPager 1.0 ModelPager.qml
+SyncStatusLine 1.0 SyncStatusLine.qml
+EventRow 1.0 EventRow.qml
+SelectionMenu 1.0 SelectionMenu.qml
+TextMenu 1.0 TextMenu.qml

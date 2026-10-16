@@ -1,0 +1,7 @@
+IANA time zone database 2026c (public domain)
+Source: https://www.iana.org/time-zones (tzdata.zi of the tz release 2026c)
+Release: 2026c
+tzdata.zi SHA-256: af5c1d3bebe136d372c131bb1a45725f955a8cc2a5ae2fc5a31d3b372e145f49
+Built with: zic -b slim (zic (Ubuntu GLIBC 2.43-2ubuntu2.4) 2.43)
+Files: 598 zone files, 346355 bytes
+Imported: 2026-10-15

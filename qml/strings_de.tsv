@@ -1,0 +1,432 @@
+# German interface texts (T175). One line per text of the app: the English source, a TAB, the German text.
+# \n and \t are written as escapes; "||" in the German part separates the singular from the plural form (for texts with %n).
+# scripts/extract-strings.py --check lists texts without a translation and translations without a text.
+%1 GB	%1 GB
+%1 MB	%1 MB
+%n change(s) waiting	%n Änderung wartet||%n Änderungen warten
+%n day(s)	%n Tag||%n Tage
+%n entries could not be read.	%n Eintrag konnte nicht gelesen werden.||%n Einträge konnten nicht gelesen werden.
+%n older message(s) loaded.	%n ältere Nachricht geladen.||%n ältere Nachrichten geladen.
+%n picture(s) could not be loaded.	%n Bild konnte nicht geladen werden.||%n Bilder konnten nicht geladen werden.
+%n unread	%n ungelesen
+(no name)	(kein Name)
+(no subject)	(kein Betreff)
+(no title)	(kein Titel)
++ %n more	+ %n weitere
+A Bcc address is not valid.	Eine Bcc-Adresse ist ungültig.
+A Cc address is not valid.	Eine Cc-Adresse ist ungültig.
+A change to "this and all later" events is not shown.	Eine Änderung für „diesen und alle späteren“ Termine wird nicht angezeigt.
+A few seconds after you read, star, move, delete, write or change an event, the reader connects to Wi-Fi and syncs. Off: changes wait for the Sync button.	Einige Sekunden nachdem Sie etwas lesen, markieren, verschieben, löschen, schreiben oder einen Termin ändern, verbindet sich der Reader mit dem WLAN und gleicht ab. Aus: Änderungen warten auf die Taste „Abgleichen“.
+A folder that is not found: choose one, or sync once so that the folders are known. Without a Trash folder deleting is permanent.	Ein Ordner wurde nicht gefunden: Wählen Sie einen aus oder gleichen Sie einmal ab, damit die Ordner bekannt sind. Ohne Papierkorb wird endgültig gelöscht.
+A recipient address is not valid.	Eine Empfängeradresse ist ungültig.
+A secure connection could not be set up. Nothing was sent.	Es konnte keine sichere Verbindung aufgebaut werden. Es wurde nichts gesendet.
+About	Info
+About this app	Über diese App
+About, licenses	Info, Lizenzen
+Accounts	Konten
+Agenda	Terminübersicht
+All day	Ganztägig
+All mail	Alle Nachrichten
+All repeats of this event are deleted from the calendar at the next sync.	Alle Wiederholungen dieses Termins werden beim nächsten Abgleich aus dem Kalender gelöscht.
+An event with this identity exists already.	Ein Termin mit dieser Kennung existiert bereits.
+Archive	Archiv
+Attachments	Anhänge
+Author: %1	Autor: %1
+Automatic	Automatisch
+Back	Zurück
+Bcc	Bcc
+By sender	Nach Absender
+By subject	Nach Betreff
+Calendar	Kalender
+Calendar account	Kalenderkonto
+Calendar feed (optional, read only)	Kalender-Feed (optional, nur lesen)
+Calendar server (CalDAV address)	Kalenderserver (CalDAV-Adresse)
+Calendar server: 	Kalenderserver: 
+Calendar: %1	Kalender: %1
+Calendars on this server	Kalender auf diesem Server
+Cancel	Abbrechen
+Cc	Cc
+Cc and Bcc	Cc und Bcc
+Cc: %1	Cc: %1
+Change	Ändern
+Change event	Termin ändern
+Changes to this event have not been sent yet.	Änderungen an diesem Termin wurden noch nicht gesendet.
+Check the clock	Uhr prüfen
+Choose a value	Wert wählen
+Choose time zone	Zeitzone wählen
+Choose where you are. Times in your calendar are shown for this place.	Wählen Sie, wo Sie sind. Die Zeiten in Ihrem Kalender werden für diesen Ort angezeigt.
+Choose your time zone first.	Wählen Sie zuerst Ihre Zeitzone.
+Choose your time zone to see the time.	Wählen Sie Ihre Zeitzone, um die Uhrzeit zu sehen.
+Choose your time zone to see the times.	Wählen Sie Ihre Zeitzone, um die Uhrzeiten zu sehen.
+Close	Schließen
+Connecting to Wi-Fi …	Verbinde mit WLAN …
+Copy	Kopieren
+Cut	Ausschneiden
+Date and time	Datum und Uhrzeit
+Day	Tag
+Decrease	Verringern
+Delete	Löschen
+Delete for good	Endgültig löschen
+Delete for good?	Endgültig löschen?
+Delete it anyway	Trotzdem löschen
+Delete this draft?	Diesen Entwurf löschen?
+Delete this event?	Diesen Termin löschen?
+Delete this message?	Diese Nachricht löschen?
+Deleted mail (Trash)	Gelöschte Nachrichten (Papierkorb)
+Discard	Verwerfen
+Discard my version	Meine Version verwerfen
+Discard this message?	Diese Nachricht verwerfen?
+Discard your version?	Ihre Version verwerfen?
+Downloaded	Geladen
+Downloading …	Lade …
+Drafts	Entwürfe
+Drafts %1	Entwürfe %1
+Edit	Bearbeiten
+Emoji	Emoji
+Encrypted from the start (TLS)	Von Anfang an verschlüsselt (TLS)
+Encryption	Verschlüsselung
+Ends (date)	Ende (Datum)
+Ends (time)	Ende (Uhrzeit)
+Enter a recipient.	Geben Sie einen Empfänger ein.
+Enter a title.	Geben Sie einen Titel ein.
+Enter your password.	Geben Sie Ihr Passwort ein.
+Enter your user name.	Geben Sie Ihren Benutzernamen ein.
+Event	Termin
+Events to decide	Termine zu entscheiden
+Every connection is checked against the usual authorities. For a server with your own authority, put its certificate as custom-ca.pem in the app's data folder (see the README).	Jede Verbindung wird gegen die üblichen Zertifizierungsstellen geprüft. Für einen Server mit eigener Zertifizierungsstelle legen Sie dessen Zertifikat als custom-ca.pem im Datenordner der App ab (siehe README).
+Feed: 	Feed: 
+Fewer days: the next sync removes the older mail from this reader (it stays on the server). Mail with a change that has not synced, and drafts, are never removed.	Weniger Tage: Der nächste Abgleich entfernt die ältere Post von diesem Reader (sie bleibt auf dem Server). Nachrichten mit einer noch nicht abgeglichenen Änderung und Entwürfe werden nie entfernt.
+First day	Erster Tag
+Folders	Ordner
+Folders for sent mail, drafts and deleted mail	Ordner für gesendete Post, Entwürfe und gelöschte Post
+Forward	Weiterleiten
+From: %1	Von: %1
+Home	Start
+Hour	Stunde
+In the app package	Im App-Paket
+Inbox	Posteingang
+Incoming server: 	Posteingangsserver: 
+Increase	Erhöhen
+Insert	Einfügen
+Invited	Eingeladen
+It was deleted on the server.	Er wurde auf dem Server gelöscht.
+It was sent	Sie wurde gesendet
+It was sent?	Wurde sie gesendet?
+Keep	Behalten
+Keep both	Beide behalten
+Keep editing	Weiter bearbeiten
+Keep my version	Meine Version behalten
+Keep the server's version	Version des Servers behalten
+Language	Sprache
+Language of the app	Sprache der App
+Larger than the limit of %1. Not downloaded.	Größer als die Grenze von %1. Nicht geladen.
+Largest attachment	Größter Anhang
+Last day	Letzter Tag
+Leave	Verlassen
+Leave without saving?	Ohne Speichern verlassen?
+License	Lizenz
+License: %1	Lizenz: %1
+Links	Links
+Load older messages	Ältere Nachrichten laden
+Load pictures	Bilder laden
+Loading pictures …	Lade Bilder …
+Mail	Post
+Mail account	Mailkonto
+Mail kept on the reader	Auf dem Reader behaltene Post
+Mail server (IMAP)	Mailserver (IMAP)
+Mark as read	Als gelesen markieren
+Mark as unread	Als ungelesen markieren
+May have been sent (%1)	Wurde vielleicht gesendet (%1)
+Message	Nachricht
+Min	Min
+Month	Monat
+More	Mehr
+Move to	Verschieben nach
+Move to Trash	In den Papierkorb
+Move to the Trash?	In den Papierkorb verschieben?
+Move to …	Verschieben nach …
+Name of the feed (optional)	Name des Feeds (optional)
+New event	Neuer Termin
+New message	Neue Nachricht
+Newest first	Neueste zuerst
+Next day	Nächster Tag
+Next month	Nächster Monat
+Next page	Nächste Seite
+Next week	Nächste Woche
+No calendar yet	Noch kein Kalender
+No drafts.	Keine Entwürfe.
+No events on this day.	Keine Termine an diesem Tag.
+No mail account yet	Noch kein Mailkonto
+No messages	Keine Nachrichten
+No network connection. Turn on Wi-Fi and try again.	Keine Netzwerkverbindung. Schalten Sie das WLAN ein und versuchen Sie es erneut.
+No recipient yet	Noch kein Empfänger
+No upcoming events	Keine anstehenden Termine
+Not saved: the reader's storage may be full.	Nicht gespeichert: Der Speicher des Readers ist vielleicht voll.
+Not sent: %1	Nicht gesendet: %1
+Not synced yet	Noch nicht abgeglichen
+Notes	Notizen
+Nothing found in the mail on this reader.	In der Post auf diesem Reader wurde nichts gefunden.
+Nothing is planned for today or tomorrow.	Für heute und morgen ist nichts geplant.
+Nothing is planned from today on. Tap the sync button to look for news.	Ab heute ist nichts geplant. Tippen Sie auf die Abgleich-Taste, um nach Neuem zu suchen.
+Nothing is waiting to be sent.	Es wartet nichts auf das Senden.
+Nothing needs a decision.	Nichts muss entschieden werden.
+Nothing to paste. Only text copied in this app can be pasted.	Nichts zum Einfügen. Nur in dieser App kopierter Text kann eingefügt werden.
+Nothing was found in the last days. Tap the sync button.	In den letzten Tagen wurde nichts gefunden. Tippen Sie auf die Abgleich-Taste.
+Now: %1. Choose another place to change it.	Jetzt: %1. Wählen Sie einen anderen Ort, um sie zu ändern.
+OK	OK
+OK, I have seen it	OK, gesehen
+Offline	Offline
+Older mail	Ältere Post
+Older messages could not be loaded: %1.	Ältere Nachrichten konnten nicht geladen werden: %1.
+Oldest first	Älteste zuerst
+On for Gmail and Outlook.com: they file every sent message in Sent. Then the app does not upload a second copy.	Für Gmail und Outlook.com einschalten: Sie legen jede gesendete Nachricht selbst in „Gesendet“ ab. Dann lädt die App keine zweite Kopie hoch.
+On the server: %1, %2	Auf dem Server: %1, %2
+Outbox	Postausgang
+Outbox %1	Postausgang %1
+Outgoing port	Port für Postausgang
+Outgoing server (SMTP, optional)	Postausgangsserver (SMTP, optional)
+Outgoing server: 	Postausgangsserver: 
+PB Office	PB Office
+Page down	Seite nach unten
+Page up	Seite nach oben
+Password	Passwort
+Passwords are kept as plain text in a file on this reader; whether the storage keeps it private is checked when you save one. Use app-specific passwords where your provider offers them.	Passwörter liegen als Klartext in einer Datei auf diesem Reader; ob der Speicher sie privat hält, wird beim Speichern geprüft. Verwenden Sie app-spezifische Passwörter, wenn Ihr Anbieter sie anbietet.
+Passwords are kept as plain text in a file that only this app can read. Use app-specific passwords where your provider offers them.	Passwörter liegen als Klartext in einer Datei, die nur diese App lesen kann. Verwenden Sie app-spezifische Passwörter, wenn Ihr Anbieter sie anbietet.
+Passwords are kept as plain text in a file, and this reader's storage cannot make it private: anyone with USB access to the reader can read it. Use app-specific passwords.	Passwörter liegen als Klartext in einer Datei, und der Speicher dieses Readers kann sie nicht privat halten: Wer per USB auf den Reader zugreifen kann, kann sie lesen. Verwenden Sie app-spezifische Passwörter.
+Paste	Einfügen
+Picture not loaded yet	Bild noch nicht geladen
+Picture on the sender's server, not loaded	Bild auf dem Server des Absenders, nicht geladen
+Please check the marked field.	Bitte prüfen Sie das markierte Feld.
+Port	Port
+Press and hold a draft to delete it.	Einen Entwurf lange drücken, um ihn zu löschen.
+Previous day	Voriger Tag
+Previous month	Voriger Monat
+Previous page	Vorige Seite
+Previous week	Vorige Woche
+Provided by the reader	Vom Reader bereitgestellt
+Remove the star	Stern entfernen
+Repeating events can be changed in your calendar app.	Wiederkehrende Termine können in Ihrer Kalender-App geändert werden.
+Repeats: %1	Wiederholung: %1
+Reply	Antworten
+Reply to all	Allen antworten
+STARTTLS is only accepted on port 143.	STARTTLS wird nur auf Port 143 akzeptiert.
+Save	Speichern
+Saved in Downloads: %1	In „Downloads“ gespeichert: %1
+Saved on this reader	Auf diesem Reader gespeichert
+Saved.	Gespeichert.
+Saving …	Speichere …
+Search	Suchen
+Security	Sicherheit
+Select all	Alles auswählen
+Send	Senden
+Send again	Erneut senden
+Send again?	Erneut senden?
+Send it again	Erneut senden
+Sender, subject, words in the text	Absender, Betreff, Wörter im Text
+Sending …	Sende …
+Sent	Gesendet
+Sent mail	Gesendete Post
+Sent. The copy in Sent is being filed	Gesendet. Die Kopie in „Gesendet“ wird abgelegt
+Sent. The copy in Sent is not filed yet (%1)	Gesendet. Die Kopie in „Gesendet“ ist noch nicht abgelegt (%1)
+Set up a calendar	Kalender einrichten
+Set up the mail account first.	Richten Sie zuerst das Mailkonto ein.
+Set up your mail account	Mailkonto einrichten
+Set up your mail account first.	Richten Sie zuerst Ihr Mailkonto ein.
+Settings	Einstellungen
+Show these calendars	Diese Kalender anzeigen
+Some of the text is very long and was cut.	Ein Teil des Textes ist sehr lang und wurde gekürzt.
+Some pictures of this message are not loaded yet.	Einige Bilder dieser Nachricht sind noch nicht geladen.
+Sort	Sortieren
+Sort the list	Liste sortieren
+Space for mail	Speicherplatz für Post
+Spam	Spam
+Star	Mit Stern markieren
+Starts (date)	Beginn (Datum)
+Starts (time)	Beginn (Uhrzeit)
+Subject	Betreff
+Sync	Abgleichen
+Sync after my changes	Nach meinen Änderungen abgleichen
+Synced %1	Abgeglichen %1
+Syncing	Gleiche ab
+Syncing …	Gleiche ab …
+Tap the gear to set up your account.	Tippen Sie auf das Zahnrad, um Ihr Konto einzurichten.
+Tap the gear to set up your calendar.	Tippen Sie auf das Zahnrad, um Ihren Kalender einzurichten.
+Tap to choose	Zum Auswählen tippen
+Test	Testen
+That folder does not exist on this account.	Dieser Ordner existiert in diesem Konto nicht.
+The answer is larger than this app accepts.	Die Antwort ist größer, als diese App akzeptiert.
+The app will stop treating the message as unsent. It will not be sent again.	Die App behandelt die Nachricht nicht mehr als ungesendet. Sie wird nicht erneut gesendet.
+The attachment limit must be between 1 and 100 MB.	Die Anhangsgrenze muss zwischen 1 und 100 MB liegen.
+The certificate is for another server name. Nothing was sent.	Das Zertifikat gilt für einen anderen Servernamen. Es wurde nichts gesendet.
+The character set of this message is not known; some letters may be wrong.	Der Zeichensatz dieser Nachricht ist unbekannt; einige Buchstaben sind möglicherweise falsch.
+The clock of this reader is about %n minute(s) ahead of the server's. Set the date and time in the reader's settings; events and times depend on it.	Die Uhr dieses Readers geht etwa %n Minute vor. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.||Die Uhr dieses Readers geht etwa %n Minuten vor. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.
+The clock of this reader is about %n minute(s) behind the server's. Set the date and time in the reader's settings; events and times depend on it.	Die Uhr dieses Readers geht etwa %n Minute nach. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.||Die Uhr dieses Readers geht etwa %n Minuten nach. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.
+The connection works. Tap Save to keep the account.	Die Verbindung funktioniert. Tippen Sie auf „Speichern“, um das Konto zu behalten.
+The data could not be upgraded to this version. Your data is unchanged and a backup copy was kept.	Die Daten konnten nicht auf diese Version umgestellt werden. Ihre Daten sind unverändert, eine Sicherungskopie wurde behalten.
+The data folder could not be opened (%1). Nothing was changed.	Der Datenordner konnte nicht geöffnet werden (%1). Es wurde nichts geändert.
+The data on this reader was written by a newer version of PB Office. Please install the newer version. Nothing was changed.	Die Daten auf diesem Reader stammen von einer neueren Version von PB Office. Bitte installieren Sie die neuere Version. Es wurde nichts geändert.
+The database failed its check. Nothing was changed or deleted. Please keep the folder system/pboffice and report this.	Die Datenbank hat die Prüfung nicht bestanden. Es wurde nichts geändert oder gelöscht. Bitte behalten Sie den Ordner system/pboffice und melden Sie dies.
+The download did not finish. Try again.	Der Download wurde nicht abgeschlossen. Versuchen Sie es erneut.
+The download failed (%1).	Der Download ist fehlgeschlagen (%1).
+The draft is deleted from this reader and from your Drafts folder.	Der Entwurf wird von diesem Reader und aus Ihrem Entwurfsordner gelöscht.
+The end is before the start.	Das Ende liegt vor dem Beginn.
+The event could not be saved on this reader.	Der Termin konnte auf diesem Reader nicht gespeichert werden.
+The event is deleted from the calendar at the next sync.	Der Termin wird beim nächsten Abgleich aus dem Kalender gelöscht.
+The feed address does not deliver a calendar.	Die Feed-Adresse liefert keinen Kalender.
+The feed address does not exist.	Die Feed-Adresse existiert nicht.
+The feed host refused the request. Check the address.	Der Feed-Server hat die Anfrage abgelehnt. Prüfen Sie die Adresse.
+The file could not be saved.	Die Datei konnte nicht gespeichert werden.
+The file custom-ca.pem could not be used and is ignored. Every connection is checked against the usual authorities; there is no way to skip the check.	Die Datei custom-ca.pem konnte nicht verwendet werden und wird ignoriert. Jede Verbindung wird gegen die üblichen Zertifizierungsstellen geprüft; die Prüfung lässt sich nicht umgehen.
+The last sync failed: %1.	Der letzte Abgleich ist fehlgeschlagen: %1.
+The list of third-party licenses is unavailable.	Die Liste der Lizenzen von Drittanbietern ist nicht verfügbar.
+The mail on this reader is more than the space allows, and nothing older can be removed. Raise the space for mail, or shorten the days kept and sync.	Die Post auf diesem Reader ist mehr, als der Platz erlaubt, und es lässt sich nichts Älteres entfernen. Erhöhen Sie den Speicherplatz für Post oder verkürzen Sie die behaltenen Tage und gleichen Sie ab.
+The message and its text are deleted. It will not be sent.	Die Nachricht und ihr Text werden gelöscht. Sie wird nicht gesendet.
+The message continues on the server; only the first part is shown.	Die Nachricht geht auf dem Server weiter; nur der erste Teil wird gezeigt.
+The message could not be queued (%1).	Die Nachricht konnte nicht in die Warteschlange gestellt werden (%1).
+The message could not be saved.	Die Nachricht konnte nicht gespeichert werden.
+The message goes to the Trash folder. You can get it back from there.	Die Nachricht kommt in den Papierkorb. Sie können sie von dort zurückholen.
+The message is deleted from the server. This cannot be undone.	Die Nachricht wird vom Server gelöscht. Das lässt sich nicht rückgängig machen.
+The message is no longer on the server.	Die Nachricht ist nicht mehr auf dem Server.
+The message may already have been delivered. If you send it again, the recipients may get it twice.	Die Nachricht wurde möglicherweise schon zugestellt. Wenn Sie sie erneut senden, erhalten die Empfänger sie eventuell doppelt.
+The message was moved on the server.	Die Nachricht wurde auf dem Server verschoben.
+The number of days must be between 1 and 365.	Die Anzahl der Tage muss zwischen 1 und 365 liegen.
+The password is stored as plain text in a file on this reader. Whether the storage keeps it private is checked when you save. Use an app-specific password.	Das Passwort liegt als Klartext in einer Datei auf diesem Reader. Ob der Speicher sie privat hält, wird beim Speichern geprüft. Verwenden Sie ein app-spezifisches Passwort.
+The password was refused.	Das Passwort wurde abgelehnt.
+The picture cannot be shown	Das Bild kann nicht angezeigt werden
+The picture could not be loaded	Das Bild konnte nicht geladen werden
+The picture is not part of the message	Das Bild gehört nicht zur Nachricht
+The picture is too large	Das Bild ist zu groß
+The pictures could not be loaded (%1).	Die Bilder konnten nicht geladen werden (%1).
+The server cannot be reached.	Der Server ist nicht erreichbar.
+The server did not accept your change.	Der Server hat Ihre Änderung nicht akzeptiert.
+The server did not answer in time.	Der Server hat nicht rechtzeitig geantwortet.
+The server does not know this address.	Der Server kennt diese Adresse nicht.
+The server does not look like a calendar server.	Der Server sieht nicht wie ein Kalenderserver aus.
+The server does not offer an encrypted connection. Nothing was sent.	Der Server bietet keine verschlüsselte Verbindung an. Es wurde nichts gesendet.
+The server keeps sent mail itself	Der Server legt gesendete Post selbst ab
+The server no longer has this attachment.	Der Server hat diesen Anhang nicht mehr.
+The server refused the request.	Der Server hat die Anfrage abgelehnt.
+The server reported a problem. Try again later.	Der Server meldet ein Problem. Versuchen Sie es später erneut.
+The server's answer could not be read.	Die Antwort des Servers konnte nicht gelesen werden.
+The server's certificate has expired. Nothing was sent.	Das Zertifikat des Servers ist abgelaufen. Es wurde nichts gesendet.
+The server's certificate is not trusted. Nothing was sent.	Dem Zertifikat des Servers wird nicht vertraut. Es wurde nichts gesendet.
+The server's certificate is not valid. Nothing was sent.	Das Zertifikat des Servers ist ungültig. Es wurde nichts gesendet.
+The setting could not be saved.	Die Einstellung konnte nicht gespeichert werden.
+The storage limit must be at least 20 MB.	Die Speichergrenze muss mindestens 20 MB betragen.
+The test failed (%1).	Der Test ist fehlgeschlagen (%1).
+The text is deleted from this reader and from your Drafts folder.	Der Text wird von diesem Reader und aus Ihrem Entwurfsordner gelöscht.
+The text is too long to send.	Der Text ist zu lang zum Senden.
+The text is too long.	Der Text ist zu lang.
+The text of the message is included. Attachments are not.	Der Text der Nachricht ist enthalten. Anhänge nicht.
+The text of this message has not been downloaded yet. Sync with Wi-Fi on.	Der Text dieser Nachricht wurde noch nicht geladen. Gleichen Sie bei eingeschaltetem WLAN ab.
+The time zone of this event is not known.	Die Zeitzone dieses Termins ist nicht bekannt.
+The time zone of this event is not known; its time is shown as written.	Die Zeitzone dieses Termins ist nicht bekannt; die Zeit wird wie angegeben gezeigt.
+The user name or password was refused.	Benutzername oder Passwort wurden abgelehnt.
+There are no folders yet. Sync once to load them.	Es gibt noch keine Ordner. Gleichen Sie einmal ab, um sie zu laden.
+There are no older messages.	Es gibt keine älteren Nachrichten.
+There is no Trash folder, so the message was not deleted.	Es gibt keinen Papierkorb, daher wurde die Nachricht nicht gelöscht.
+There is no Trash folder. The message is deleted from the server. This cannot be undone.	Es gibt keinen Papierkorb. Die Nachricht wird vom Server gelöscht. Das lässt sich nicht rückgängig machen.
+There is no calendar here that accepts new events.	Hier gibt es keinen Kalender, der neue Termine annimmt.
+There is no network connection. Turn on Wi-Fi and try again.	Es gibt keine Netzwerkverbindung. Schalten Sie das WLAN ein und versuchen Sie es erneut.
+There is not enough space on the reader.	Auf dem Reader ist nicht genug Platz.
+Third-party licenses	Lizenzen von Drittanbietern
+This calendar does not allow changes.	Dieser Kalender erlaubt keine Änderungen.
+This event comes from a calendar feed and cannot be changed here.	Dieser Termin stammt aus einem Kalender-Feed und kann hier nicht geändert werden.
+This event has two versions. Choose one first.	Dieser Termin hat zwei Versionen. Wählen Sie zuerst eine aus.
+This event is being deleted.	Dieser Termin wird gelöscht.
+This event is no longer available.	Dieser Termin ist nicht mehr verfügbar.
+This event repeats in a way this app cannot show. Only its first time is listed.	Dieser Termin wiederholt sich auf eine Art, die diese App nicht anzeigen kann. Nur der erste Zeitpunkt wird aufgeführt.
+This event was changed here and on the server; both versions are kept.	Dieser Termin wurde hier und auf dem Server geändert; beide Versionen bleiben erhalten.
+This is not a valid address.	Das ist keine gültige Adresse.
+This is not a valid server name.	Das ist kein gültiger Servername.
+This message cannot be shown as text.	Diese Nachricht kann nicht als Text angezeigt werden.
+This message has %n picture(s) on the sender's server. Loading them tells the sender that you opened the message.	Diese Nachricht hat %n Bild auf dem Server des Absenders. Beim Laden erfährt der Absender, dass Sie die Nachricht geöffnet haben.||Diese Nachricht hat %n Bilder auf dem Server des Absenders. Beim Laden erfährt der Absender, dass Sie die Nachricht geöffnet haben.
+This message has no text, only attachments.	Diese Nachricht hat keinen Text, nur Anhänge.
+This message is not available.	Diese Nachricht ist nicht verfügbar.
+This message is too large to show.	Diese Nachricht ist zu groß zum Anzeigen.
+This reader's network library is too old for mail.	Die Netzwerkbibliothek dieses Readers ist zu alt für E-Mail.
+This reader's storage cannot keep the password file private: anyone who can read the storage can read your password. Use an app-specific password.	Der Speicher dieses Readers kann die Passwortdatei nicht privat halten: Wer den Speicher lesen kann, kann Ihr Passwort lesen. Verwenden Sie ein app-spezifisches Passwort.
+This time zone is not known.	Diese Zeitzone ist nicht bekannt.
+Time zone	Zeitzone
+Time zone data: release %1	Zeitzonendaten: Version %1
+Time zone of the event: %1	Zeitzone des Termins: %1
+Times are in the time zone %1.	Die Zeiten gelten in der Zeitzone %1.
+Times are shown for the place you choose. Tap the button below.	Die Zeiten werden für den gewählten Ort angezeigt. Tippen Sie auf die Taste unten.
+Title	Titel
+To	An
+To decide	Zu entscheiden
+To decide %1	Zu entscheiden %1
+To: %1	An: %1
+Today	Heute
+Today and tomorrow	Heute und morgen
+Trash	Papierkorb
+Try again	Erneut versuchen
+Type a word and tap the magnifier. Only mail that is on this reader is searched.	Geben Sie ein Wort ein und tippen Sie auf die Lupe. Durchsucht wird nur Post, die auf diesem Reader liegt.
+Upgrade with STARTTLS	Mit STARTTLS umschalten
+Use a date like 2026-10-20.	Verwenden Sie ein Datum wie 2026-10-20.
+Use a port from 1 to 65535.	Verwenden Sie einen Port von 1 bis 65535.
+Use a time like 09:30.	Verwenden Sie eine Uhrzeit wie 09:30.
+Use an https address of your calendar server.	Verwenden Sie eine https-Adresse Ihres Kalenderservers.
+Use an https or webcal address.	Verwenden Sie eine https- oder webcal-Adresse.
+Use the server's	Die des Servers verwenden
+Use the server's version?	Die Version des Servers verwenden?
+User name	Benutzername
+Version %1	Version %1
+Waiting for a connection (%1)	Warte auf eine Verbindung (%1)
+Waiting to be sent	Wartet auf das Senden
+Week	Woche
+What do you want to do?	Was möchten Sie tun?
+Where	Ort
+Where: %1	Ort: %1
+Which time zone are you in?	In welcher Zeitzone sind Sie?
+Write a message	Nachricht schreiben
+Year	Jahr
+You deleted this event.	Sie haben diesen Termin gelöscht.
+Your changes to this event are deleted from this reader.	Ihre Änderungen an diesem Termin werden von diesem Reader gelöscht.
+Your changes to this event are deleted from this reader. The server's version stays.	Ihre Änderungen an diesem Termin werden von diesem Reader gelöscht. Die Version des Servers bleibt.
+Your changes to this event are lost.	Ihre Änderungen an diesem Termin gehen verloren.
+Your e-mail address	Ihre E-Mail-Adresse
+Your name (optional)	Ihr Name (optional)
+Your own address in the account settings is not valid.	Ihre eigene Adresse in den Kontoeinstellungen ist ungültig.
+Your own certificate authority is loaded (%n certificate(s)). Every connection is still checked; a certificate that cannot be verified is refused.	Ihre eigene Zertifizierungsstelle ist geladen (%n Zertifikat). Jede Verbindung wird weiterhin geprüft; ein Zertifikat, das sich nicht prüfen lässt, wird abgelehnt.||Ihre eigene Zertifizierungsstelle ist geladen (%n Zertifikate). Jede Verbindung wird weiterhin geprüft; ein Zertifikat, das sich nicht prüfen lässt, wird abgelehnt.
+Your password is kept in a file that only this app can read.	Ihr Passwort liegt in einer Datei, die nur diese App lesen kann.
+Your password is stored on this reader like the mail password. Use an app-specific password if your provider offers one.	Ihr Passwort liegt wie das Mailpasswort auf diesem Reader. Verwenden Sie ein app-spezifisches Passwort, wenn Ihr Anbieter eines anbietet.
+Yours: %1, %2	Ihre: %1, %2
+a recipient address was refused	eine Empfängeradresse wurde abgelehnt
+could not apply	konnte nicht angewendet werden
+no Sent folder is known yet	noch kein Ordner „Gesendet“ bekannt
+no unread mail	keine ungelesene Post
+not chosen	nicht gewählt
+not found	nicht gefunden
+not on the server	nicht auf dem Server
+not set up	nicht eingerichtet
+not synced	nicht abgeglichen
+read only	nur lesen
+set up	eingerichtet
+starred	mit Stern
+the answer is larger than this app accepts	die Antwort ist größer, als diese App akzeptiert
+the app was closed while sending	die App wurde beim Senden geschlossen
+the calendar feed address does not exist	die Adresse des Kalender-Feeds existiert nicht
+the calendar feed does not deliver a calendar	der Kalender-Feed liefert keinen Kalender
+the calendar feed host refused the request	der Server des Kalender-Feeds hat die Anfrage abgelehnt
+the calendar server's answer could not be read	die Antwort des Kalenderservers konnte nicht gelesen werden
+the certificate is for another server name	das Zertifikat gilt für einen anderen Servernamen
+the connection was lost	die Verbindung wurde unterbrochen
+the folder was reset on the server	der Ordner wurde auf dem Server zurückgesetzt
+the message is too large for the server	die Nachricht ist für den Server zu groß
+the server cannot be reached	der Server ist nicht erreichbar
+the server did not answer in time	der Server hat nicht rechtzeitig geantwortet
+the server is busy	der Server ist ausgelastet
+the server refused the request	der Server hat die Anfrage abgelehnt
+the server rejected the message	der Server hat die Nachricht zurückgewiesen
+the server reported a problem	der Server meldet ein Problem
+the server's answer could not be understood	die Antwort des Servers wurde nicht verstanden
+the server's certificate has expired	das Zertifikat des Servers ist abgelaufen
+the server's certificate is not trusted	dem Zertifikat des Servers wird nicht vertraut
+the server's certificate is not valid	das Zertifikat des Servers ist ungültig
+the user name or password was refused	Benutzername oder Passwort wurden abgelehnt
+there is no network connection	es gibt keine Netzwerkverbindung
+two versions	zwei Versionen
+unavailable	nicht verfügbar
+unknown	unbekannt
+unread	ungelesen

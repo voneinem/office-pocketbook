@@ -1,111 +1,93 @@
-#include "pbnotes/connection_test.h"
+#include "pbo/connection_test.h"
 
-#include <algorithm>
-#include <cctype>
+#include "pbo/log.h"
 
-namespace pbnotes {
+namespace pbo {
 
-namespace {
+Result<ConnectionReport> test_mail_connection(ImapTransport& imap, SmtpTransport& smtp, const MailAccountInput& input, bool network_up) {
+    Result<ConnectionReport> result;
+    ConnectionReport& report = result.value;
 
-std::string lower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
-    return s;
-}
-
-std::string trim(const std::string& s) {
-    size_t b = 0, e = s.size();
-    while (b < e && std::isspace(static_cast<unsigned char>(s[b]))) ++b;
-    while (e > b && std::isspace(static_cast<unsigned char>(s[e - 1]))) --e;
-    return s.substr(b, e - b);
-}
-
-UrlCheck fail(const char* key) {
-    UrlCheck r;
-    r.error_key = key;
-    return r;
-}
-
-bool valid_host(const std::string& host) {
-    if (host.empty() || host.front() == '.' || host.back() == '.' || host.front() == '-') return false;
-    for (char c : host)
-        if (!(std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '-')) return false;
-    return true;
-}
-
-}  // namespace
-
-UrlCheck normalize_server_url(const std::string& input) {
-    const std::string url = trim(input);
-    if (url.empty()) return fail("url_empty");
-    for (char c : url)
-        if (std::isspace(static_cast<unsigned char>(c)) || std::iscntrl(static_cast<unsigned char>(c))) return fail("url_invalid");
-
-    const size_t scheme_end = url.find("://");
-    if (scheme_end == std::string::npos || lower(url.substr(0, scheme_end)) != "https") return fail("url_not_https");
-
-    std::string rest = url.substr(scheme_end + 3);
-    if (rest.find('?') != std::string::npos || rest.find('#') != std::string::npos) return fail("url_invalid");
-
-    const size_t slash = rest.find('/');
-    std::string authority = slash == std::string::npos ? rest : rest.substr(0, slash);
-    std::string path = slash == std::string::npos ? std::string() : rest.substr(slash);
-    if (authority.empty() || authority.find('@') != std::string::npos) return fail("url_invalid");
-
-    std::string host = authority;
-    std::string port;
-    const size_t colon = authority.rfind(':');
-    if (colon != std::string::npos) {
-        host = authority.substr(0, colon);
-        port = authority.substr(colon + 1);
-        if (port.empty() || port.size() > 5 || !std::all_of(port.begin(), port.end(), [](unsigned char c) { return std::isdigit(c); }))
-            return fail("url_invalid");
-        const int p = std::stoi(port);
-        if (p < 1 || p > 65535) return fail("url_invalid");
-    }
-    host = lower(host);
-    if (!valid_host(host)) return fail("url_invalid");
-
-    while (!path.empty() && path.back() == '/') path.pop_back();
-
-    UrlCheck ok;
-    ok.ok = true;
-    ok.normalized = "https://" + host + (port.empty() ? "" : ":" + port) + path;
-    return ok;
-}
-
-ConnectionTestResult ConnectionTester::test(const std::string& url, const std::string& username,
-                                            const std::string& password) {
-    ConnectionTestResult result;
-    result.ca_source = ca_source_;
-
-    const UrlCheck check = normalize_server_url(url);
-    if (!check.ok) {
-        result.message_key = check.error_key;
+    const std::vector<FieldError> invalid = validate_mail_account(input);
+    if (!invalid.empty()) {   // refused before any connection
+        report.failed_side = invalid.front().field;
+        result.error = make_error(ErrorClass::Unsupported, invalid.front().key, "a value of the form is not valid");
         return result;
     }
-    result.normalized_url = check.normalized;
-    if (username.empty() || password.empty()) {
-        result.message_key = "credentials_missing";
+    if (!network_up) {
+        result.error = make_error(ErrorClass::Network, "no_network", "there is no network connection");
         return result;
     }
 
-    ApiClient api(transport_, {check.normalized, username, password});
-    const CapabilitiesResult caps = api.fetch_capabilities();
-    result.error_class = caps.error;
-    result.detail = caps.detail;
-    switch (caps.error) {
-        case ErrorClass::None:
-            result.ok = true;
-            result.message_key = "ok";
-            break;
-        case ErrorClass::Auth: result.message_key = "auth_rejected"; break;
-        case ErrorClass::Network: result.message_key = "server_unreachable"; break;
-        case ErrorClass::Tls: result.message_key = "certificate_unverifiable"; break;
-        case ErrorClass::Unsupported: result.message_key = "server_unsupported"; break;
-        case ErrorClass::Maintenance: result.message_key = "server_maintenance"; break;
-        case ErrorClass::Server: result.message_key = "server_error"; break;
+    ImapEndpoint ie;
+    ie.host = input.account.imap_host;
+    ie.port = input.account.imap_port;
+    ie.security = input.account.imap_security;
+    ie.username = input.account.username;
+    report.imap_error = imap.connect(ie, input.imap_password);
+    report.imap_ok = report.imap_error.ok();
+    if (report.imap_ok) report.imap_capabilities = imap.capabilities();
+    imap.disconnect();
+
+    SmtpEndpoint se;
+    se.host = input.account.smtp_host;
+    se.port = input.account.smtp_port;
+    se.security = input.account.smtp_security;
+    se.username = input.account.smtp_username.empty() ? input.account.username : input.account.smtp_username;
+    const std::string smtp_password = input.smtp_password.empty() ? input.imap_password : input.smtp_password;
+    report.smtp_error = smtp.test_connection(se, smtp_password);
+    report.smtp_ok = report.smtp_error.ok();
+
+    if (!report.imap_ok) {
+        result.error = report.imap_error;
+        report.failed_side = "imap";
+    } else if (!report.smtp_ok) {
+        result.error = report.smtp_error;
+        report.failed_side = "smtp";
     }
+    log::event("connection.tested", {log::text("imap", report.imap_ok ? "ok" : report.imap_error.key), log::text("smtp", report.smtp_ok ? "ok" : report.smtp_error.key)});
     return result;
 }
 
-}  // namespace pbnotes
+Result<CalendarConnectionReport> test_calendar_connection(HttpTransport& http, const CalendarAccountInput& raw, bool network_up) {
+    Result<CalendarConnectionReport> result;
+    CalendarConnectionReport& report = result.value;
+    const CalendarAccountInput input = normalize_calendar_account(raw);
+
+    const std::vector<FieldError> invalid = validate_calendar_account(input);
+    if (!invalid.empty()) {   // refused before any connection
+        report.failed_side = invalid.front().field;
+        result.error = make_error(ErrorClass::Unsupported, invalid.front().key, "a value of the form is not valid");
+        return result;
+    }
+    if (!network_up) {
+        result.error = make_error(ErrorClass::Network, "no_network", "there is no network connection");
+        return result;
+    }
+    if (!input.caldav_url.empty()) {
+        report.server_tested = true;
+        CalDavClient client(http, input.caldav_url, input.username, input.password);
+        auto found = client.discover();
+        report.server_error = found.error;
+        report.server_ok = found.ok();
+        if (found.ok()) report.calendars = std::move(found.value);
+    }
+    if (!input.feed_url.empty()) {
+        report.feed_tested = true;
+        const FeedResult f = fetch_feed(http, input.feed_url, std::string(), std::string());
+        report.feed_ok = f.state == FeedResult::State::Changed;
+        report.feed_error = f.error;
+    }
+    if (report.server_tested && !report.server_ok) {
+        result.error = report.server_error;
+        report.failed_side = "caldav";
+    } else if (report.feed_tested && !report.feed_ok) {
+        result.error = report.feed_error;
+        report.failed_side = "feed";
+    }
+    log::event("connection.tested", {log::text("caldav", !report.server_tested ? "none" : report.server_ok ? "ok" : report.server_error.key),
+                                     log::text("feed", !report.feed_tested ? "none" : report.feed_ok ? "ok" : report.feed_error.key)});
+    return result;
+}
+
+}  // namespace pbo

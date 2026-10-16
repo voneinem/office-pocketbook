@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace pbnotes {
+namespace pbo {
 namespace sql {
 
 inline std::string sqlite_error(sqlite3* db) { return db ? sqlite3_errmsg(db) : "sqlite error"; }
@@ -55,10 +55,15 @@ public:
     void bind_text(int i, const std::string& v) { sqlite3_bind_text(st_, i, v.c_str(), static_cast<int>(v.size()), SQLITE_TRANSIENT); }
     void bind_int64(int i, long long v) { sqlite3_bind_int64(st_, i, v); }
     void bind_null(int i) { sqlite3_bind_null(st_, i); }
+    void bind_blob(int i, const std::string& v) { sqlite3_bind_blob(st_, i, v.data(), static_cast<int>(v.size()), SQLITE_TRANSIENT); }
     int step() { return sqlite3_step(st_); }
     std::string text(int col) const {
         const unsigned char* t = sqlite3_column_text(st_, col);
         return t ? std::string(reinterpret_cast<const char*>(t), static_cast<size_t>(sqlite3_column_bytes(st_, col))) : std::string();
+    }
+    std::string blob(int col) const {
+        const void* b = sqlite3_column_blob(st_, col);
+        return b ? std::string(static_cast<const char*>(b), static_cast<size_t>(sqlite3_column_bytes(st_, col))) : std::string();
     }
     bool is_null(int col) const { return sqlite3_column_type(st_, col) == SQLITE_NULL; }
     long long int64(int col) const { return sqlite3_column_int64(st_, col); }
@@ -69,4 +74,4 @@ private:
 };
 
 }  // namespace sql
-}  // namespace pbnotes
+}  // namespace pbo

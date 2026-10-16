@@ -1,0 +1,21 @@
+From: Anna Beispiel <anna@example.org>
+To: Alice <alice@example.org>
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+Message-ID: <p2231@example.org>
+Subject: RFC 2231
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="B2231"
+
+--B2231
+Content-Type: text/plain
+
+Text.
+--B2231
+Content-Type: application/octet-stream
+Content-Disposition: attachment;
+ filename*0*=ISO-8859-1'de'Gr%FC%DF;
+ filename*1="e Datei";
+ filename*2*=%2Etxt
+
+DATA
+--B2231--

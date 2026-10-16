@@ -1,8 +1,9 @@
-#include "pbnotes/utf8.h"
+#include "pbo/utf8.h"
 
 #include <cstdint>
+#include <string>
 
-namespace pbnotes {
+namespace pbo {
 
 namespace {
 
@@ -84,4 +85,49 @@ size_t utf8_cluster_end(std::string_view text, size_t pos) {
     return end;
 }
 
-}  // namespace pbnotes
+namespace {
+// U+00C0..U+00FF and U+0100..U+017F folded to lower-case ASCII ("" = keep the character as it is)
+const char* const kLatin1Fold[64] = {"a","a","a","a","a","a","ae","c","e","e","e","e","i","i","i","i","d","n","o","o","o","o","o","","o","u","u","u","u","y","th","ss","a","a","a","a","a","a","ae","c","e","e","e","e","i","i","i","i","d","n","o","o","o","o","o","","o","u","u","u","u","y","th","y"};
+const char* const kLatinExtAFold[128] = {"a","a","a","a","a","a","c","c","c","c","c","c","c","c","d","d","d","d","e","e","e","e","e","e","e","e","e","e","g","g","g","g","g","g","g","g","h","h","h","h","i","i","i","i","i","i","i","i","i","i","ij","ij","j","j","k","k","k","l","l","l","l","l","l","ŀ","ŀ","l","l","n","n","n","n","n","n","n","n","n","o","o","o","o","o","o","oe","oe","r","r","r","r","r","r","s","s","s","s","s","s","s","s","t","t","t","t","t","t","u","u","u","u","u","u","u","u","u","u","u","u","w","w","y","y","y","z","z","z","z","z","z","s"};
+}  // namespace
+
+std::string sort_key(std::string_view text) {
+    std::string out;
+    out.reserve(text.size());
+    size_t i = 0;
+    while (i < text.size()) {
+        const unsigned char c = static_cast<unsigned char>(text[i]);
+        uint32_t cp = c;
+        size_t len = 1;
+        if (c >= 0xC2 && c <= 0xF4) {
+            len = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : 2;
+            if (i + len > text.size()) len = 1;
+            else {
+                cp = c & (len == 2 ? 0x1F : len == 3 ? 0x0F : 0x07);
+                for (size_t k = 1; k < len; ++k) cp = (cp << 6) | (static_cast<unsigned char>(text[i + k]) & 0x3F);
+            }
+        }
+        const std::string_view raw = text.substr(i, len);
+        i += len;
+        if (len == 1 && c < 0x80) {
+            out += static_cast<char>(c >= 'A' && c <= 'Z' ? c + 32 : c);
+        } else if (cp >= 0xC0 && cp <= 0xFF && kLatin1Fold[cp - 0xC0][0]) {
+            out += kLatin1Fold[cp - 0xC0];
+        } else if (cp >= 0x100 && cp <= 0x17F) {
+            out += kLatinExtAFold[cp - 0x100];
+        } else if (cp >= 0x410 && cp <= 0x42F) {   // Cyrillic capitals
+            const uint32_t lower = cp + 0x20;
+            out += static_cast<char>(0xC0 | (lower >> 6));
+            out += static_cast<char>(0x80 | (lower & 0x3F));
+        } else if (cp >= 0x391 && cp <= 0x3A9) {   // Greek capitals
+            const uint32_t lower = cp + 0x20;
+            out += static_cast<char>(0xC0 | (lower >> 6));
+            out += static_cast<char>(0x80 | (lower & 0x3F));
+        } else {
+            out.append(raw);
+        }
+    }
+    return out;
+}
+
+}  // namespace pbo

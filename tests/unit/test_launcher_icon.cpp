@@ -23,7 +23,7 @@ uint32_t u32(const std::vector<unsigned char>& d, size_t o) {
 
 // An 8 bpp BMP with a grey palette; rows are bottom-up and padded to 4 bytes.
 bool load(const std::string& name, Bmp& out) {
-    std::ifstream f(std::string(PBNOTES_SOURCE_DIR) + "/res/icons/" + name, std::ios::binary);
+    std::ifstream f(std::string(PBO_SOURCE_DIR) + "/res/icons/" + name, std::ios::binary);
     std::vector<unsigned char> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     if (d.size() < 54 || d[0] != 'B' || d[1] != 'M') return false;
     const size_t off = u32(d, 10);
@@ -78,14 +78,14 @@ void check_variant(const std::string& name, int background) {
     PB_CHECK(soft >= 100);  // anti-aliased
 }
 
-PB_TEST(the_normal_icon_has_no_frame_and_the_glyph_is_sized_and_centred) { check_variant("pbnotes.bmp", 255); }
+PB_TEST(the_normal_icon_has_no_frame_and_the_glyph_is_sized_and_centred) { check_variant("pboffice.bmp", 255); }
 
-PB_TEST(the_focused_icon_has_no_frame_and_the_glyph_is_sized_and_centred) { check_variant("pbnotes_f.bmp", 0); }
+PB_TEST(the_focused_icon_has_no_frame_and_the_glyph_is_sized_and_centred) { check_variant("pboffice_f.bmp", 0); }
 
 PB_TEST(the_two_variants_are_different_pictures) {
     Bmp a, b;
-    PB_CHECK(load("pbnotes.bmp", a));
-    PB_CHECK(load("pbnotes_f.bmp", b));
+    PB_CHECK(load("pboffice.bmp", a));
+    PB_CHECK(load("pboffice_f.bmp", b));
     PB_CHECK_EQ(a.px.size(), b.px.size());
     size_t differing = 0;
     for (size_t i = 0; i < a.px.size(); ++i)

@@ -4,18 +4,18 @@
 
 #include <string>
 
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 #include "test_support.h"
 #include "tmp_dir.h"
 
-using namespace pbnotes::about;
+using namespace pbo::about;
 
 namespace {
 
 const char* kApp =
-    "id: pbnotes\n"
+    "id: pboffice\n"
     "kind: app\n"
-    "name: Notes Pocketbook\n"
+    "name: PB Office\n"
     "license: MIT License\n"
     "holder: Jane Author\n"
     "copyright: Copyright (c) 2026 Jane Author\n"
@@ -25,7 +25,7 @@ const char* kSqlite =
     "id: sqlite\n"
     "kind: component\n"
     "name: SQLite\n"
-    "purpose: Stores the notes on the reader\n"
+    "purpose: Stores the mail on the reader\n"
     "license: Public domain\n"
     "holder: The SQLite authors\n"
     "url: https://www.sqlite.org/copyright.html\n"
@@ -77,7 +77,7 @@ PB_TEST(well_formed_manifest_parses_in_file_order) {
     Manifest m = parse_manifest(join({kApp, kSqlite, kQt}));
     PB_CHECK(m.readable);
     PB_CHECK(m.app.has_value());
-    PB_CHECK_EQ(m.app->name, std::string("Notes Pocketbook"));
+    PB_CHECK_EQ(m.app->name, std::string("PB Office"));
     PB_CHECK_EQ(m.app->holder, std::string("Jane Author"));
     PB_CHECK_EQ(m.app->copyright, std::string("Copyright (c) 2026 Jane Author"));
     PB_CHECK_EQ(m.app->text.size(), size_t(1));
@@ -123,7 +123,7 @@ PB_TEST(each_required_component_key_is_required) {
 }
 
 PB_TEST(app_block_needs_copyright) {
-    std::string app = "id: pbnotes\nkind: app\nname: X\nlicense: MIT\nholder: A\n";
+    std::string app = "id: pboffice\nkind: app\nname: X\nlicense: MIT\nholder: A\n";
     Manifest m = parse_manifest(app);
     PB_CHECK(!m.app.has_value());
     PB_CHECK_EQ(m.bad_blocks, 1);
@@ -137,10 +137,10 @@ PB_TEST(duplicate_id_drops_the_later_block) {
 
 PB_TEST(second_app_block_is_dropped) {
     std::string app2 = std::string(kApp);
-    app2.replace(app2.find("id: pbnotes"), 11, "id: other");
+    app2.replace(app2.find("id: pboffice"), 11, "id: other");
     Manifest m = parse_manifest(join({kApp, app2.c_str()}));
     PB_CHECK(m.app.has_value());
-    PB_CHECK_EQ(m.app->id, std::string("pbnotes"));
+    PB_CHECK_EQ(m.app->id, std::string("pboffice"));
     PB_CHECK_EQ(m.bad_blocks, 1);
 }
 

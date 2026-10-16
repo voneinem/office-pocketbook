@@ -3,10 +3,10 @@
 #include <cstring>
 #include <string>
 
-#include "pbnotes/sync_scheduler.h"
+#include "pbo/sync_scheduler.h"
 #include "test_support.h"
 
-using pbnotes::SyncScheduler;
+using pbo::SyncScheduler;
 using Decision = SyncScheduler::Decision;
 
 namespace {

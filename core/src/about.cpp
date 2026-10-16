@@ -1,4 +1,4 @@
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 
 #include <cctype>
 #include <filesystem>
@@ -7,9 +7,9 @@
 #include <map>
 #include <set>
 
-#include "pbnotes/log.h"
+#include "pbo/log.h"
 
-namespace pbnotes {
+namespace pbo {
 namespace about {
 
 namespace {
@@ -252,4 +252,4 @@ std::string display_version(std::string_view version) {
 }
 
 }  // namespace about
-}  // namespace pbnotes
+}  // namespace pbo

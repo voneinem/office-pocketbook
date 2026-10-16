@@ -35,6 +35,7 @@ Column {
         background: Rectangle { color: Style.paper; radius: Style.radiusField; border.width: Style.ruleWidth; border.color: Style.ink }
         onAccepted: root.accepted()
         onTextEdited: root.textEdited()
+        TextMenu { target: field }
     }
     Text {
         visible: root.errorText.length > 0

@@ -1,0 +1,6 @@
+# Leaks in system libraries that libcurl and Qt pull in at load time (not ours)
+leak:libp11-kit
+leak:libgnutls
+leak:libidn2
+leak:libfontconfig
+leak:libexpat

@@ -5,12 +5,12 @@
 #include <string>
 #include <vector>
 
-#include "pbnotes/ca_selector.h"
+#include "pbo/ca_selector.h"
 #include "test_support.h"
 #include "tmp_dir.h"
 
-using pbnotes::CaSource;
-using pbnotes::select_ca_file;
+using pbo::CaSource;
+using pbo::select_ca_file;
 
 namespace {
 const char* kPem = "-----BEGIN CERTIFICATE-----\nMIIBfake\n-----END CERTIFICATE-----\n";
@@ -67,9 +67,9 @@ PB_TEST(usable_ca_file_check) {
     pbtest::TmpDir d;
     d.write("ok.pem", kPem);
     d.write("bad.pem", "nothing");
-    PB_CHECK(pbnotes::is_usable_ca_file(d.file("ok.pem")));
-    PB_CHECK(!pbnotes::is_usable_ca_file(d.file("bad.pem")));
-    PB_CHECK(!pbnotes::is_usable_ca_file(d.file("missing.pem")));
+    PB_CHECK(pbo::is_usable_ca_file(d.file("ok.pem")));
+    PB_CHECK(!pbo::is_usable_ca_file(d.file("bad.pem")));
+    PB_CHECK(!pbo::is_usable_ca_file(d.file("missing.pem")));
 }
 
 PB_TEST_MAIN()

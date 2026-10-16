@@ -1,8 +1,8 @@
-#include "pbnotes/paging.h"
+#include "pbo/paging.h"
 
 #include <algorithm>
 
-namespace pbnotes {
+namespace pbo {
 
 double page_target(double content_y, double view_height, double content_height, double step, int direction,
                    const std::vector<Interval>& unsplittable) {
@@ -21,4 +21,4 @@ double page_target(double content_y, double view_height, double content_height, 
     return std::min(max_y, std::max(0.0, target));
 }
 
-}  // namespace pbnotes
+}  // namespace pbo

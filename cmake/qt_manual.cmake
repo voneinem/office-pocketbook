@@ -20,12 +20,12 @@ if(NOT HOST_RCC)
         "Host Qt 'rcc' not found. Install the Qt host tools (Debian/Ubuntu: qt6-base-dev-tools); "
         "the SDK's own rcc cannot run on current hosts. You can also pass -DHOST_RCC=<path>.")
 endif()
-execute_process(COMMAND ${HOST_RCC} --version OUTPUT_VARIABLE PBNOTES_RCC_VERSION
+execute_process(COMMAND ${HOST_RCC} --version OUTPUT_VARIABLE PBO_RCC_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 message(STATUS "Host moc: ${HOST_MOC}")
-message(STATUS "Host rcc: ${HOST_RCC} (${PBNOTES_RCC_VERSION}); device Qt 6.8.x runtime")
+message(STATUS "Host rcc: ${HOST_RCC} (${PBO_RCC_VERSION}); device Qt 6.8.x runtime")
 
-set(PBNOTES_QT_INCLUDES
+set(PBO_QT_INCLUDES
     ${QT6_ROOT}/include ${QT6_ROOT}/include/QtQml ${QT6_ROOT}/include/QtQuick
     ${QT6_ROOT}/include/QtGui ${QT6_ROOT}/include/QtCore ${QT6_ROOT}/include/QtNetwork
     ${QT6_ROOT}/include/QtConcurrent
@@ -33,15 +33,15 @@ set(PBNOTES_QT_INCLUDES
     ${QT6_ROOT}/include/QtGui/6.8.2 ${QT6_ROOT}/include/QtGui/6.8.2/QtGui)
 
 # Qt is linked by absolute path; QtQuick.Controls is resolved from the device's /usr/qml.
-set(PBNOTES_QT_LIBS
+set(PBO_QT_LIBS
     ${QT6_ROOT}/lib/libQt6Quick.so ${QT6_ROOT}/lib/libQt6Qml.so
     ${QT6_ROOT}/lib/libQt6Gui.so ${QT6_ROOT}/lib/libQt6Core.so)
 
-# pbnotes_moc(<out-var> <header>...)  -> list of generated moc_*.cpp
-function(pbnotes_moc out_var)
+# pbo_moc(<out-var> <header>...)  -> list of generated moc_*.cpp
+function(pbo_moc out_var)
     set(outs)
     set(includes)
-    foreach(inc ${PBNOTES_QT_INCLUDES} ${CMAKE_SOURCE_DIR}/app ${CMAKE_SOURCE_DIR}/bridge/include)
+    foreach(inc ${PBO_QT_INCLUDES} ${CMAKE_SOURCE_DIR}/app ${CMAKE_SOURCE_DIR}/bridge/include)
         list(APPEND includes -I${inc})
     endforeach()
     foreach(hdr ${ARGN})
@@ -56,8 +56,8 @@ function(pbnotes_moc out_var)
     set(${out_var} ${outs} PARENT_SCOPE)
 endfunction()
 
-# pbnotes_rcc(<out-var> <name> <qrc> [<dependency>...])  -> generated qrc_<name>.cpp
-function(pbnotes_rcc out_var name qrc)
+# pbo_rcc(<out-var> <name> <qrc> [<dependency>...])  -> generated qrc_<name>.cpp
+function(pbo_rcc out_var name qrc)
     get_filename_component(abs_qrc ${qrc} ABSOLUTE)
     set(out ${CMAKE_CURRENT_BINARY_DIR}/qrc_${name}.cpp)
     add_custom_command(OUTPUT ${out}

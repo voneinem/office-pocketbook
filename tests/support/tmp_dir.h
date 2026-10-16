@@ -15,7 +15,7 @@ namespace pbtest {
 class TmpDir {
 public:
     TmpDir() {
-        char tmpl[] = "/tmp/pbnotes-test-XXXXXX";
+        char tmpl[] = "/tmp/pbo-test-XXXXXX";
         if (!mkdtemp(tmpl)) throw std::runtime_error("mkdtemp failed");
         path_ = tmpl;
     }

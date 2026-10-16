@@ -1,0 +1,8 @@
+From: a@example.org
+To: b@example.org
+Subject: s
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+MIME-Version: 1.0
+Content-Type: text/html
+
+<p>&#99999999999; &#x110000; &#xD800; &#0; &unknown; &amp &#; &#x;</p>

@@ -18,30 +18,45 @@
         <file>InkSwitch.qml</file>
         <file>InkRow.qml</file>
         <file>PageButtons.qml</file>
-        <file>BlockText.qml</file>
-        <file>TitleBlock.qml</file>
         <file>SelectableText.qml</file>
-        <file>TableRowView.qml</file>
-        <file>AttachmentView.qml</file>
         <file>ConfirmDialog.qml</file>
         <file>ChoiceDialog.qml</file>
         <file>TextEntryDialog.qml</file>
         <file>SelectionHandle.qml</file>
         <file>SelectionHandles.qml</file>
         <file>SelectionMenu.qml</file>
-        <file>SlashMenu.qml</file>
+        <file>TextMenu.qml</file>
         <file>DateTimePicker.qml</file>
         <file>EmojiPicker.qml</file>
-        <file>pages/SetupPage.qml</file>
-        <file>pages/NoteListPage.qml</file>
-        <file>pages/ReaderPage.qml</file>
-        <file>pages/EditorPage.qml</file>
-        <file>pages/ImagePage.qml</file>
-        <file>pages/FilePickerPage.qml</file>
+        <file>ModelPager.qml</file>
+        <file>SyncStatusLine.qml</file>
+        <file>EventRow.qml</file>
+        <file>pages/FoldersPage.qml</file>
+        <file>pages/ComposePage.qml</file>
+        <file>pages/OutboxPage.qml</file>
+        <file>pages/SearchPage.qml</file>
         <file>pages/SettingsPage.qml</file>
+        <file>pages/HomePage.qml</file>
+        <file>pages/DraftsPage.qml</file>
+        <file>pages/AgendaPage.qml</file>
+        <file>pages/DayPage.qml</file>
+        <file>pages/MonthPage.qml</file>
+        <file>pages/EventPage.qml</file>
+        <file>pages/EventEditPage.qml</file>
+        <file>pages/ConflictsPage.qml</file>
+        <file>pages/TimeZonePage.qml</file>
+        <file>strings_de.tsv</file>
+        <file>pages/CalendarAccountPage.qml</file>
+        <file>pages/AccountSetupPage.qml</file>
+        <file>pages/MessageListPage.qml</file>
+        <file>pages/ReaderPage.qml</file>
+        <file>pages/StorageErrorPage.qml</file>
         <file>pages/AboutPage.qml</file>
         <file>pages/LicenseTextPage.qml</file>
         <file>pages/ThirdPartyPage.qml</file>
+        <file>icons/calendar.svg</file>
+        <file>icons/send.svg</file>
+        <file>icons/reply-all.svg</file>
         <file>icons/chevron-down.svg</file>
         <file>icons/chevron-left.svg</file>
         <file>icons/chevron-up.svg</file>
