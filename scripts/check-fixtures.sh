@@ -21,6 +21,7 @@ check_dir() {
             [ -z "$host" ] && continue
             case "$host" in
                 example.com|*.example.com|example.org|*.example.org|example.net|*.example.net|localhost|127.0.0.1|*.invalid) ;;
+                calendarserver.org) ;;   # XML namespace URI of the ctag property (a protocol identifier, not a server)
                 *) echo "$f: non-anonymized host '$host'" >&2; bad=1 ;;
             esac
         done < <(grep -aoiE 'https?://[A-Za-z0-9._-]+' "$f" | sed -E 's#^https?://##' | tr 'A-Z' 'a-z' | sort -u)
