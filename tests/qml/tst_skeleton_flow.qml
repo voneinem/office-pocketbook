@@ -233,8 +233,12 @@ TestCase {
         p.perform("toggle_star")
         compare(reader.flagged, true)
         compare(harness.query("SELECT flags_local & 4 FROM message WHERE id = " + id), "4")
+        compare(findChild(p, "starButton").text, "Remove the star")      // the star and the delete button sit in the message bar
+        compare(findChild(p, "starButton").icon, "star-filled")
+        verify(findChild(p, "deleteButton") !== null)
         var labels = p.actionChoices().map(function (c) { return c.label })
-        compare(labels[1], "Remove the star")
+        compare(labels.length, 2)                                          // read/unread and move (no star, no delete in the menu)
+        verify(labels.indexOf("Delete") < 0 && labels.indexOf("Star") < 0)
         p.destroy()
     }
 
@@ -326,6 +330,31 @@ TestCase {
         harness.exec("UPDATE message SET flags_base = 1, flags_local = 1, local_state = 'synced' WHERE id = " + id)
     }
 
+    // the rows of a newsletter table: a portrait-sized picture stands left, the lines of its row right of it; icons stand alone
+    function test_html_table_row_picture_is_shown_with_the_text_of_its_row_beside_it() {
+        var id = harness.addRowMessage()
+        var p = page("ReaderPage.qml", { messageId: id })
+        var pic = findChild(p, "picture1")
+        tryCompare(pic, "status", Image.Ready, 5000)
+        var row = findChild(p, "beside1")
+        compare(row.visible, true)
+        compare(row.text, "Alice Example\nExample GmbH\n17 Oct")                // the cell separator " |" is not shown
+        verify(row.x >= 68, "the text starts right of the picture column")
+        verify(row.y === 0 || row.y < p.lineHeight, "the text is on the picture's row")
+        verify(row.parent.height % p.lineHeight === 0)
+        // not loaded: only a frame of the sender's size, the text still beside it
+        compare(findChild(p, "picture2").visible, false)
+        compare(findChild(p, "beside2").text, "Bob Example\n9 Nov")
+        var frame = findChild(p, "pictureNote2")
+        compare(frame.visible, true)
+        compare(frame.width, Math.min(68, row.parent.width * 0.4))
+        verify(frame.height > 0)
+        // an icon has no row: no text beside it
+        compare(findChild(p, "beside3").visible, false)
+        p.destroy()
+        harness.exec("DELETE FROM message WHERE uid = 902")   // the row mail was only for this test
+    }
+
     // pictures of an HTML mail: a part of the mail shows at once, a picture on the sender's server waits for the tap, and the links are short
     function test_html_picture_mail_shows_its_picture_offers_the_rest_and_shortens_the_links() {
         var id = harness.addPictureMessage()
@@ -336,6 +365,8 @@ TestCase {
         tryCompare(pic, "status", Image.Ready, 5000)
         verify(pic.visible)
         verify(pic.paintedHeight > 0)
+        compare(pic.width, 4)                                                      // the picture is 4 x 3 pixels: it stays that size, it is not stretched to the page width
+        compare(pic.height, 3)
         compare(findChild(p, "pictureNote1").visible, false)                       // the loaded picture needs no note
         compare(findChild(p, "picture3").visible, false)                           // the picture on the sender's server is not loaded
         verify(findChild(p, "pictureNote3").visible)

@@ -158,9 +158,7 @@ Item {
     // ---- what the user does with the message: read / unread, star, move, delete ----
     function actionChoices() {
         var c = [ { label: reader.unread ? qsTr("Mark as read") : qsTr("Mark as unread"), value: "toggle_read" },
-                  { label: reader.flagged ? qsTr("Remove the star") : qsTr("Star"), value: "toggle_star" },
-                  { label: qsTr("Move to …"), value: "move" },
-                  { label: qsTr("Delete"), value: "delete" } ]
+                  { label: qsTr("Move to …"), value: "move" } ]
         return c
     }
     function perform(value) {
@@ -189,11 +187,15 @@ Item {
     TopBar {
         id: topBar
         title: qsTr("Message")
-        leftItems: [ IconButton { objectName: "readerBack"; text: qsTr("Back"); icon: "chevron-left"; onClicked: if (page.StackView.view) page.StackView.view.pop() } ]
-        rightItems: [
+        leftItems: [
+            IconButton { objectName: "readerBack"; text: qsTr("Back"); icon: "chevron-left"; onClicked: if (page.StackView.view) page.StackView.view.pop() },
             IconButton { objectName: "replyButton"; text: qsTr("Reply"); icon: "undo"; onClicked: page.composeFrom("reply") },
             IconButton { objectName: "replyAllButton"; text: qsTr("Reply to all"); icon: "reply-all"; onClicked: page.composeFrom("reply_all") },
-            IconButton { objectName: "forwardButton"; text: qsTr("Forward"); icon: "redo"; onClicked: page.composeFrom("forward") },
+            IconButton { objectName: "forwardButton"; text: qsTr("Forward"); icon: "redo"; onClicked: page.composeFrom("forward") }
+        ]
+        rightItems: [
+            IconButton { objectName: "starButton"; text: reader.flagged ? qsTr("Remove the star") : qsTr("Star"); icon: reader.flagged ? "star-filled" : "star"; onClicked: page.perform("toggle_star") },
+            IconButton { objectName: "deleteButton"; text: qsTr("Delete"); icon: "trash"; onClicked: page.perform("delete") },
             IconButton { id: moreButton; objectName: "readerActions"; text: qsTr("More"); icon: "menu"; onClicked: { actionChoice.choices = page.actionChoices(); actionChoice.anchor = moreButton; actionChoice.open() } }
         ]
     }
@@ -355,10 +357,17 @@ Item {
                         clip: isImage
                         // text: the text and one empty line after it; picture: whole lines too (the picture, or the two lines of its note, and one empty line)
                         height: isImage ? pictureHeight + page.lineHeight : txt.height + page.lineHeight
+                        // a portrait-sized picture with the lines of its row beside it (the bridge decides): the picture column, then the text
+                        readonly property bool hasBeside: isImage && modelData.beside.length > 0
+                        readonly property real colWidth: hasBeside ? Math.min(modelData.widthHint, content.width * 0.4) : 0
+                        readonly property bool pictureReady: pic.visible && pic.status === Image.Ready
+                        // the height the picture, or its frame while it is not shown, takes
+                        readonly property real framedHeight: pictureReady ? Math.min(pic.paintedHeight, maxPicture)
+                                                           : (hasBeside ? Math.min(modelData.heightHint * colWidth / Math.max(1, modelData.widthHint), maxPicture) : 0)
                         readonly property real pictureHeight: {
                             if (!isImage) return 0
-                            if (pic.visible && pic.status === Image.Ready) return Math.ceil(Math.min(pic.paintedHeight, maxPicture) / page.lineHeight) * page.lineHeight
-                            return page.lineHeight * 2
+                            if (!hasBeside && !pictureReady) return page.lineHeight * 2
+                            return Math.ceil(Math.max(framedHeight, hasBeside ? besideTxt.height : 0) / page.lineHeight) * page.lineHeight
                         }
                         Rectangle {
                             objectName: "blockMark" + blockItem.index
@@ -384,8 +393,10 @@ Item {
                             visible: blockItem.isImage && blockItem.modelData.source.length > 0 && status !== Image.Error
                             x: 0
                             y: 0
-                            width: content.width
-                            height: blockItem.maxPicture
+                            // never larger than the picture itself (a small logo stays small), never wider than the text or taller than a page
+                            // (the size the sender gave the picture applies when it is smaller: a picture of twice the size is shown at the size meant)
+                            width: Math.min(content.width, implicitWidth, blockItem.hasBeside ? blockItem.colWidth : (blockItem.isImage && blockItem.modelData.widthHint > 0 ? blockItem.modelData.widthHint : 1e9))
+                            height: implicitWidth > 0 ? Math.min(blockItem.maxPicture, width * implicitHeight / implicitWidth) : 0
                             source: blockItem.isImage ? blockItem.modelData.source : ""
                             sourceSize: Qt.size(content.width, blockItem.maxPicture)
                             fillMode: Image.PreserveAspectFit
@@ -394,16 +405,25 @@ Item {
                             asynchronous: true
                             cache: false
                         }
-                        // not shown: a frame with the alt text and why
+                        Line {
+                            id: besideTxt
+                            objectName: "beside" + blockItem.index
+                            visible: blockItem.hasBeside
+                            x: blockItem.colWidth + 16
+                            width: content.width - x
+                            text: blockItem.hasBeside ? blockItem.modelData.beside : ""
+                        }
+                        // not shown: a frame with the alt text and why (beside a row of text: only the frame, the page's offer says why)
                         Rectangle {
                             objectName: "pictureNote" + blockItem.index
                             visible: blockItem.isImage && !(pic.visible && pic.status === Image.Ready) && !(pic.visible && pic.status === Image.Loading)
-                            width: content.width
-                            height: page.lineHeight * 2
+                            width: blockItem.hasBeside ? blockItem.colWidth : content.width
+                            height: blockItem.hasBeside ? blockItem.framedHeight : page.lineHeight * 2
                             color: Style.paper
                             border.width: Style.hairlineWidth
                             border.color: Style.hairline
                             Text {
+                                visible: !blockItem.hasBeside
                                 x: 12
                                 width: parent.width - 24
                                 height: page.lineHeight
@@ -415,6 +435,7 @@ Item {
                                 text: blockItem.isImage && blockItem.modelData.alt.length > 0 ? "[" + blockItem.modelData.alt + "]" : ""
                             }
                             Text {
+                                visible: !blockItem.hasBeside
                                 x: 12
                                 y: page.lineHeight
                                 width: parent.width - 24

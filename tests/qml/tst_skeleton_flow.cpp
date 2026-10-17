@@ -160,6 +160,52 @@ public:
         return id;
     }
 
+    // The rows of a newsletter table: a portrait-sized picture (68 x 68 as the sender wrote it) with the lines of its row right under it, once
+    // loaded and once not; and a small icon (14 x 21) that stands alone.
+    Q_INVOKABLE qlonglong addRowMessage() {
+        pbo::PullBatch batch;
+        pbo::PulledMessage m;
+        m.uid = 902;
+        m.subject = "Offer";
+        m.from_name = "Shop";
+        m.from_addr = "news@example.org";
+        m.to_text = "Alice <alice@example.org>";
+        m.date_utc = kNow - 500;
+        batch.messages.push_back(m);
+        store->apply_pull(store->folders().at(0).id, batch);
+        const long long id = std::stoll(store->debug_query("SELECT id FROM message WHERE uid = 902"));
+        const std::string mark = "\xEF\xBF\xBC";
+        pbo::BodyUpdate u;
+        u.text = "Birthdays\n\n" + mark + "1" + mark + "\nAlice Example\nExample GmbH |\n17 Oct\n\n" + mark + "2" + mark + "\nBob Example\n9 Nov\n\n" + mark + "3" + mark + "\nFooter";
+        pbo::StoredImage a;
+        a.idx = 1;
+        a.kind = "cid";
+        a.src = "cid:alice";
+        a.alt = "Alice";
+        a.section = "1.2";
+        a.width = 68;
+        a.height = 68;
+        pbo::StoredImage b;
+        b.idx = 2;
+        b.kind = "remote";
+        b.src = "https://img.example.org/bob.png";
+        b.alt = "Bob";
+        b.width = 68;
+        b.height = 68;
+        pbo::StoredImage icon;
+        icon.idx = 3;
+        icon.kind = "remote";
+        icon.src = "https://img.example.org/icon.png";
+        icon.width = 14;
+        icon.height = 21;
+        u.images = {a, b, icon};
+        store->apply_body(id, u);
+        const QByteArray png = QByteArray::fromBase64("iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAEElEQVR4nGM4IScHRww4OQD1xwwxB+utmQAAAABJRU5ErkJggg==");
+        store->set_image_loaded(id, 1, "image/png", std::string(png.constData(), static_cast<size_t>(png.size())));
+        return id;
+    }
+
+
     int port() const { return port_; }
     int smtpPort() const { return smtp_port_; }
     QString pagesDir() const { return pages_; }

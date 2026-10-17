@@ -39,6 +39,17 @@ int picture_marker(const QString& line) {
     return ok && n >= 1 && n <= 1000 ? n : 0;
 }
 
+// A picture that the sender gave a size of its own between 48 and 120 pixels on both sides (a portrait, a product photo, a logo tile) belongs
+// beside the text that follows it, like the photo and name of one row of a table; icons, banners and pictures of unknown size stand alone.
+bool beside_sized(const pbo::StoredImage& im) { return im.width >= 48 && im.width <= 120 && im.height >= 48 && im.height <= 120; }
+
+// The text of a row beside a picture: the cell separators of the HTML conversion (" |" at the end of a line, a line of "|") are not shown.
+QString beside_line(QString text) {
+    text = text.trimmed();
+    while (text.endsWith(QLatin1Char('|'))) { text.chop(1); text = text.trimmed(); }
+    return text;
+}
+
 }  // namespace
 
 ReaderBridge::ReaderBridge(Config config, QObject* parent) : QObject(parent), config_(std::move(config)) {}
@@ -138,7 +149,8 @@ void ReaderBridge::open(qlonglong messageId) {
         current_level = -1;
     };
     if (h.body_state == "text") {
-        for (const QString& line : lines) {
+        for (int li = 0; li < lines.size(); ++li) {
+            const QString& line = lines.at(li);
             int start = 0;
             const int level = quote_level(line, &start);
             QString text = line.mid(start);
@@ -156,6 +168,22 @@ void ReaderBridge::open(qlonglong messageId) {
                     b["source"] = im.state == "loaded" ? QStringLiteral("image://mailimg/%1/%2?v=%3").arg(messageId).arg(n).arg(im.size) : QString();
                     b["widthHint"] = im.width;
                     b["heightHint"] = im.height;
+                    // the lines right under a portrait-sized picture (no blank line between) are its row: they are shown beside it
+                    QStringList beside;
+                    if (beside_sized(im)) {
+                        int next = li + 1;
+                        for (; next < lines.size() && beside.size() < 8; ++next) {
+                            int s2 = 0;
+                            const int l2 = quote_level(lines.at(next), &s2);
+                            QString t2 = lines.at(next).mid(s2);
+                            if (l2 != level || t2.trimmed().isEmpty() || picture_marker(t2.trimmed()) > 0) break;
+                            t2.remove(QChar(0xFFFC));
+                            t2 = beside_line(t2);
+                            if (!t2.isEmpty()) beside.append(t2);
+                        }
+                        if (!beside.isEmpty()) li = next - 1;
+                    }
+                    b["beside"] = beside.join(QLatin1Char('\n'));
                     blocks_.append(b);
                     break;
                 }
