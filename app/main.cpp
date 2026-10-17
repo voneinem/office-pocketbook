@@ -1,15 +1,16 @@
-// pbnotes: Nextcloud Notes client for the PocketBook InkPad One. Pattern adapted from InkFeed (see NOTICE).
+// pboffice: offline email and calendar client for the PocketBook InkPad One.
+// Pattern adapted from InkFeed and notes-pocketbook (see NOTICE).
 
 #include <sys/stat.h>
 
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
 #include <QDir>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontInfo>
-#include <QImage>
-#include <QImageReader>
+#include <QFile>
+#include <QGuiApplication>
+#include <QLocale>
+#include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include <QQuickWindow>
@@ -18,16 +19,38 @@
 #include <QTimer>
 #include <iostream>
 
-#include "device_bridge.h"
-#include "attachment_image_provider.h"
+#include <memory>
+#include <vector>
+
 #include "about_bridge.h"
-#include "edit_bridge.h"
-#include "file_preview_provider.h"
-#include "attachments_bridge.h"
-#include "notes_bridge.h"
-#include "pbnotes/attachment_service.h"
-#include "pbnotes/log.h"
-#include "pbnotes/version.h"
+#include "calendar_text.h"
+#include "account_bridge.h"
+#include "compose_bridge.h"
+#include "outbox_model.h"
+#include "agenda_model.h"
+#include "day_model.h"
+#include "event_bridge.h"
+#include "event_edit_bridge.h"
+#include "settings_bridge.h"
+#include "table_translator.h"
+#include "home_bridge.h"
+#include "conflicts_model.h"
+#include "month_model.h"
+#include "timezone_bridge.h"
+#include "device_bridge.h"
+#include "folder_model.h"
+#include "mail_image_provider.h"
+#include "message_list_model.h"
+#include "pbo/ca_selector.h"
+#include "pbo/log.h"
+#include "pbo/store.h"
+#include "pbo/tz.h"
+#include "pbo/version.h"
+#include "pbo/types.h"
+#include "attachment_bridge.h"
+#include "reader_bridge.h"
+#include "sync_bridge.h"
+#include "worker.h"
 
 #ifdef PLATFORM_POCKETBOOK
 #include <inkview.h>
@@ -35,21 +58,24 @@
 
 int main(int argc, char** argv) {
     QGuiApplication app(argc, argv);
-    app.setApplicationName(QStringLiteral("pbnotes"));
+    app.setApplicationName(QStringLiteral("pboffice"));
+#ifdef PLATFORM_POCKETBOOK
+    // JPEG and GIF pictures of mails: a copy of the Qt plugins travels with the app, in case the reader's own Qt has none
+    QCoreApplication::addLibraryPath(QStringLiteral("/mnt/ext1/applications/pboffice-plugins"));
+#endif
     const bool self_test = app.arguments().contains(QStringLiteral("--self-test"));
 
     // Emoji: the monochrome Noto Emoji font (SIL OFL, see NOTICE) is added behind the default font, so
     // every Text/TextField/TextArea shows emojis without a per-item setting. A missing or unreadable font
-    // is not an error: the device font is used as before (spec 002 FR-015).
+    // is not an error: the device font is used as before.
 #ifdef PLATFORM_POCKETBOOK
-    const QString emoji_font = QStringLiteral("/mnt/ext1/applications/pbnotes-emoji.ttf");
+    const QString emoji_font = QStringLiteral("/mnt/ext1/applications/pboffice-emoji.ttf");
 #else
-    const QString emoji_font = qEnvironmentVariable("PBNOTES_EMOJI_FONT", QStringLiteral(PBNOTES_EMOJI_FONT));
+    const QString emoji_font = qEnvironmentVariable("PBO_EMOJI_FONT", QStringLiteral(PBO_EMOJI_FONT));
 #endif
     const int emoji_id = QFontDatabase::addApplicationFont(emoji_font);
     const QStringList emoji_families = emoji_id >= 0 ? QFontDatabase::applicationFontFamilies(emoji_id) : QStringList();
-    // The user interface typeface (spec 010 R-5): the reader's own apps are set in Roboto, so use it when the font
-    // database has it, otherwise the default font as before.
+    // The reader's own apps are set in Roboto: use it when the font database has it, else the default font.
     const bool roboto = QFontDatabase::families().contains(QStringLiteral("Roboto"));
     // the family that is really used (the default may be a generic name such as "Sans Serif", which is
     // not matched by name once a family list is set)
@@ -59,7 +85,7 @@ int main(int argc, char** argv) {
         font.setFamilies({ui_family, emoji_families.first()});
         app.setFont(font);
     } else {
-        pbnotes::log::event("font.emoji_missing", {});
+        pbo::log::event("font.emoji_missing", {});
         if (roboto) {
             QFont font = app.font();
             font.setFamilies({ui_family});
@@ -69,122 +95,253 @@ int main(int argc, char** argv) {
 
 #ifdef PLATFORM_POCKETBOOK
     // PocketBook convention: app data lives under USERDATA (/mnt/ext1/system).
-    const QString data_dir = QString::fromLatin1(USERDATA) + QStringLiteral("/pbnotes");
-    const QString bundled_ca = QStringLiteral("/mnt/ext1/applications/pbnotes-cacert.pem");
+    const QString data_dir = QString::fromLatin1(USERDATA) + QStringLiteral("/pboffice");
 #else
-    const QString data_dir = QStringLiteral("./pbnotes-data");
-    const QString bundled_ca = qEnvironmentVariable("PBNOTES_CA", QStringLiteral(PBNOTES_BUNDLED_CA));
+    // PBO_DATA_DIR lets the host demo (scripts/run-host-demo.sh) and tests use a throw-away folder.
+    const QString data_dir = qEnvironmentVariable("PBO_DATA_DIR", QStringLiteral("./pboffice-data"));
 #endif
-    mkdir(data_dir.toStdString().c_str(), 0755);
+    // The data directory is private to the app where the file system allows it (constitution: restrictive
+    // permissions). The stat-after-chmod check that reports whether it took effect arrives with the store.
+    mkdir(data_dir.toStdString().c_str(), 0700);
 
     // A blinking caret makes the e-ink panel refresh periodically; keep it static.
     app.styleHints()->setCursorFlashTime(0);
 
-    NotesBridge::Config config;
-    config.dataDir = data_dir;
-    config.bundledCaPath = bundled_ca;
-    config.deviceCaCandidates = {QStringLiteral("/etc/ssl/certs/ca-certificates.crt"), QStringLiteral("/etc/ssl/cert.pem")};
-    config.attachmentsDir = data_dir + QStringLiteral("/attachments");
-    mkdir(config.attachmentsDir.toStdString().c_str(), 0755);
-    // Auto Sync asks whether Wi-Fi is up before it starts a sync. The device bridge is created after the notes bridge
-    // (it reads the rotation preference), so the callback reaches it through a pointer.
-    DeviceBridge* wifiProbe = nullptr;
-    config.wifiConnected = [&wifiProbe]() { return wifiProbe != nullptr && wifiProbe->wifiConnected(); };
-    NotesBridge notes(config);
-    if (!notes.ok()) std::cerr << "[pbnotes] the database could not be opened" << std::endl;
+    pbo::log::event("font.ui", {pbo::log::text("family", ui_family.toStdString()), pbo::log::count("roboto", roboto ? 1 : 0)});
 
-    // The janitor at start: files no attachment row names (a crash can leave some) and half-written ones go.
-    if (notes.store()) pbnotes::AttachmentService::purge(*notes.store(), config.attachmentsDir.toStdString());
+    // The store, the worker thread and the mail bridges. Declaration order is destruction order backwards: the bridges
+    // wait for the worker, the worker stops before the store closes.
+    const std::string data = data_dir.toStdString();
+    pbo::SystemClock clock;
+    std::unique_ptr<pbo::Store> store;
+    QString startup_error;   // "" or the cause key shown by the storage error page
     {
-        QStringList formats;  // which picture formats this Qt can decode (format names only)
-        for (const QByteArray& f : QImageReader::supportedImageFormats()) formats << QString::fromLatin1(f);
-        pbnotes::log::event("image.formats", {pbnotes::log::text("list", formats.join(QLatin1Char(',')).toStdString())});
+        auto opened = pbo::Store::open(data, clock);
+        if (opened.ok()) store = std::move(opened.value);
+        else startup_error = QString::fromStdString(opened.error.key);
     }
-    // which typeface the interface uses (a family name and a flag only; read on the device, spec 010 R-5)
-    pbnotes::log::event("font.ui", {pbnotes::log::text("family", ui_family.toStdString()), pbnotes::log::count("roboto", roboto ? 1 : 0)});
+    Worker worker;
+    std::unique_ptr<AccountBridge> account;
+    std::unique_ptr<SyncBridge> syncBridge;
+    std::unique_ptr<MessageListModel> messages;
+    std::unique_ptr<MessageListModel> searchResults;
+    std::unique_ptr<FolderModel> folders;
+    std::unique_ptr<ReaderBridge> reader;
+    std::unique_ptr<AttachmentBridge> attachmentBridge;
+    std::unique_ptr<pbo::TzDatabase> tzdb;
+    std::unique_ptr<AgendaModel> agendaModel;
+    const char* custom_ca_status = "none";   // custom-ca.pem: none | loaded | invalid (shown in Settings)
+    int custom_ca_count = 0;
+    std::unique_ptr<DayModel> dayModel;
+    std::unique_ptr<MonthModel> monthModel;
+    std::unique_ptr<EventBridge> eventBridge;
+    std::unique_ptr<EventEditBridge> eventEditBridge;
+    std::unique_ptr<ConflictsModel> conflictsModel;
+    std::unique_ptr<SettingsBridge> settingsBridge;
+    std::unique_ptr<HomeBridge> homeBridge;
+    std::unique_ptr<TimeZoneBridge> timezoneBridge;
+    pbo::SystemRandom random;   // the Message-IDs of new drafts
+    std::unique_ptr<ComposeBridge> composeBridge;
+    std::unique_ptr<OutboxModel> outboxModel;
+    std::unique_ptr<DraftsModel> draftsModel;
+    if (store) {
+        // The time zone data (IANA, compact TZif files) comes with the app, never from the device: the same event shows the same time everywhere.
+#ifdef PLATFORM_POCKETBOOK
+        const std::string zoneinfo_dir = qEnvironmentVariable("PBO_ZONEINFO", QStringLiteral("/mnt/ext1/applications/pboffice-zoneinfo")).toStdString();
+#else
+        const std::string zoneinfo_dir = qEnvironmentVariable("PBO_ZONEINFO", QStringLiteral(PBO_ZONEINFO_DIR)).toStdString();
+#endif
+        tzdb = pbo::TzDatabase::open(zoneinfo_dir);
+        if (!tzdb) pbo::log::event("tz.unavailable", {});   // the calendar then waits; mail works as before
+        // TLS trust: the device's own store when usable, else the bundled bundle; plus the user's custom-ca.pem.
+#ifdef PLATFORM_POCKETBOOK
+        const std::string bundled_ca = "/mnt/ext1/applications/pboffice-cacert.pem";
+#else
+        const std::string bundled_ca = qEnvironmentVariable("PBO_BUNDLED_CA", QStringLiteral(PBO_BUNDLED_CA)).toStdString();
+#endif
+        const pbo::CaSelection base = pbo::select_ca_file(
+            {"/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem", "/etc/ssl/certs/ca-bundle.crt"}, bundled_ca);
+        const pbo::EffectiveCa ca = pbo::build_effective_ca(base.path, data + "/custom-ca.pem", data + "/effective-ca.pem");
+        custom_ca_status = ca.custom_status == pbo::CustomCaStatus::Loaded ? "loaded" : (ca.custom_status == pbo::CustomCaStatus::Invalid ? "invalid" : "none");
+        custom_ca_count = ca.custom_cert_count;
+        pbo::log::event("ca.selected", {pbo::log::text("source", base.source == pbo::CaSource::Device ? "device" : "bundled"),
+                                        pbo::log::count("custom_certificates", ca.custom_cert_count)});
+        AccountBridge::Config ac;
+        ac.store = store.get();
+        ac.data_dir = data;
+        ac.ca_file = ca.path;
+        ac.worker = &worker;
+        account = std::make_unique<AccountBridge>(ac);
+        SyncBridge::Config sc;
+        sc.store = store.get();
+        sc.data_dir = data;
+        sc.ca_file = ca.path;
+        sc.worker = &worker;
+        sc.clock = &clock;
+        sc.tz = tzdb.get();
+        syncBridge = std::make_unique<SyncBridge>(sc);
+        MessageListModel::Config mc;
+        mc.store = store.get();
+        messages = std::make_unique<MessageListModel>(mc);
+        searchResults = std::make_unique<MessageListModel>(mc);   // the result list of the search page; the same class, in search mode
+        FolderModel::Config fc;
+        fc.store = store.get();
+        folders = std::make_unique<FolderModel>(fc);
+        ReaderBridge::Config rc;
+        rc.store = store.get();
+        rc.worker = &worker;   // the pictures of a mail are loaded only when the user taps "Load pictures"
+        rc.data_dir = data;
+        rc.ca_file = ca.path;
+        reader = std::make_unique<ReaderBridge>(rc);
+        AttachmentBridge::Config atc;
+        atc.store = store.get();
+        atc.data_dir = data;
+        atc.ca_file = ca.path;
+#ifdef PLATFORM_POCKETBOOK
+        atc.downloads_dir = "/mnt/ext1/Downloads";   // the reader's own Downloads folder
+#else
+        atc.downloads_dir = qEnvironmentVariable("PBO_DOWNLOADS_DIR", data_dir + QStringLiteral("/Downloads")).toStdString();
+#endif
+        atc.worker = &worker;
+        attachmentBridge = std::make_unique<AttachmentBridge>(atc);
+
+        AgendaModel::Config agc;
+        agc.store = store.get();
+        agc.tz = tzdb.get();
+        agc.clock = &clock;
+        agendaModel = std::make_unique<AgendaModel>(agc);
+        DayModel::Config dyc;
+        dyc.store = store.get();
+        dyc.tz = tzdb.get();
+        dyc.clock = &clock;
+        dayModel = std::make_unique<DayModel>(dyc);
+        MonthModel::Config mmc;
+        mmc.store = store.get();
+        mmc.tz = tzdb.get();
+        mmc.clock = &clock;
+        monthModel = std::make_unique<MonthModel>(mmc);
+        EventBridge::Config evc;
+        evc.store = store.get();
+        evc.tz = tzdb.get();
+        evc.clock = &clock;
+        eventBridge = std::make_unique<EventBridge>(evc);
+        EventEditBridge::Config eec;
+        eec.store = store.get();
+        eec.tz = tzdb.get();
+        eec.clock = &clock;
+        eec.random = &random;
+        eventEditBridge = std::make_unique<EventEditBridge>(eec);
+        ConflictsModel::Config cfc;
+        cfc.store = store.get();
+        cfc.tz = tzdb.get();
+        cfc.clock = &clock;
+        cfc.random = &random;
+        conflictsModel = std::make_unique<ConflictsModel>(cfc);
+        SettingsBridge::Config stc;
+        stc.store = store.get();
+        stc.custom_ca_status = QString::fromLatin1(custom_ca_status);
+        stc.custom_ca_count = custom_ca_count;
+        settingsBridge = std::make_unique<SettingsBridge>(stc);
+        HomeBridge::Config hbc;
+        hbc.store = store.get();
+        hbc.tz = tzdb.get();
+        hbc.clock = &clock;
+        homeBridge = std::make_unique<HomeBridge>(hbc);
+        TimeZoneBridge::Config tzc;
+        tzc.store = store.get();
+        tzc.tz = tzdb.get();
+        tzc.clock = &clock;
+        tzc.worker = &worker;
+        timezoneBridge = std::make_unique<TimeZoneBridge>(tzc);
+        ComposeBridge::Config cc;
+        cc.store = store.get();
+        cc.clock = &clock;
+        cc.random = &random;
+        composeBridge = std::make_unique<ComposeBridge>(cc);
+        outboxModel = std::make_unique<OutboxModel>(OutboxModel::Config{store.get()});
+        draftsModel = std::make_unique<DraftsModel>(DraftsModel::Config{store.get()});
+    }
 
     DeviceBridge device;
-    wifiProbe = &device;
-    // With Wi-Fi off (the reader's usual state) Auto Sync asks the device to connect, as "Sync now" does.
-    notes.setWifiRequest([&device]() { device.connectNetwork(); });
-    QObject::connect(&device, &DeviceBridge::networkResult, &notes, &NotesBridge::networkAnswered);
-    device.setRotationPreference(notes.rotationPreference());
-    QObject::connect(&notes, &NotesBridge::rotationPreferenceChanged, &device,
-                     [&]() { device.setRotationPreference(notes.rotationPreference()); });
-    device.setAttachmentsDirectory(config.attachmentsDir);
     app.installEventFilter(&device);  // Back / Escape
 
-    AttachmentsBridge::Config attachment_config;
-#ifdef PLATFORM_POCKETBOOK
-    attachment_config.rootDirectory = QStringLiteral("/mnt/ext1");
-#else
-    attachment_config.rootDirectory = QDir::homePath();
-#endif
-    attachment_config.topFolders = AttachmentsBridge::defaultTopFolders();   // the file picker's top level (spec 009)
-    attachment_config.openFile = [&device](const QString& path) { return device.openFile(path); };
-    attachment_config.wifiConnected = [&device]() { return device.wifiConnected(); };
-    AttachmentsBridge attachments(&notes, attachment_config);
-
-    // About screens: the manifest and the license texts live in pbnotes-licenses/ next to the app on the reader,
-    // and in the repository on the host (PBNOTES_LICENSES_ROOT overrides both).
+    // About screens: the manifest and the license texts live in pboffice-licenses/ next to the app on the reader,
+    // and in the repository on the host (PBO_LICENSES_ROOT overrides both).
     AboutBridge::Config about_config;
 #ifdef PLATFORM_POCKETBOOK
-    about_config.licensesRoot = qEnvironmentVariable("PBNOTES_LICENSES_ROOT", QStringLiteral("/mnt/ext1/applications/pbnotes-licenses"));
+    about_config.licensesRoot = qEnvironmentVariable("PBO_LICENSES_ROOT", QStringLiteral("/mnt/ext1/applications/pboffice-licenses"));
 #else
-    about_config.licensesRoot = qEnvironmentVariable("PBNOTES_LICENSES_ROOT", QStringLiteral(PBNOTES_LICENSES_ROOT));
+    about_config.licensesRoot = qEnvironmentVariable("PBO_LICENSES_ROOT", QStringLiteral(PBO_LICENSES_ROOT));
 #endif
-    about_config.version = QString::fromUtf8(pbnotes::version());
+    about_config.version = QString::fromUtf8(pbo::version());
+    about_config.dataDir = data_dir;
+    if (tzdb) about_config.tzRelease = QString::fromStdString(tzdb->version());
     AboutBridge about(about_config);
-    ClipboardBridge clipboard;
-    EditSession editSession;
-    SlashBridge slash;
 
+    // The interface language: English texts in the QML, German from a table (bridge/include/table_translator.h). "auto" follows the reader's language.
+    TableTranslator german;
+    {
+        QFile table(QStringLiteral(":/qml/strings_de.tsv"));
+        if (!table.open(QIODevice::ReadOnly) || !german.loadTable(table.readAll())) std::cerr << "[pboffice] the German texts could not be read" << std::endl;
+    }
+    bool german_on = false;
     QQmlApplicationEngine engine;
+    const auto apply_language = [&]() {
+        QString want = settingsBridge ? settingsBridge->language() : QStringLiteral("auto");
+        if (want == QLatin1String("auto")) {
+#ifdef PLATFORM_POCKETBOOK
+            const QString device = QString::fromLatin1(currentLang());   // the reader's language, e.g. "de"
+#else
+            const QString device = qEnvironmentVariable("PBO_LANG", QLocale::system().name());
+#endif
+            want = device.startsWith(QLatin1String("de"), Qt::CaseInsensitive) ? QStringLiteral("de") : QStringLiteral("en");
+        }
+        const bool on = want == QLatin1String("de") && !german.isEmpty();
+        if (on == german_on) return;
+        german_on = on;
+        caltext::set_german(on);
+        if (on) QCoreApplication::installTranslator(&german);
+        else QCoreApplication::removeTranslator(&german);
+        engine.retranslate();
+    };
+    apply_language();
+    if (settingsBridge) QObject::connect(settingsBridge.get(), &SettingsBridge::languageChanged, &app, apply_language);
     int qml_warnings = 0;
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, &app, [&](const QList<QQmlError>& list) {
-        for (const QQmlError& e : list) std::cerr << "[pbnotes] QML: " << e.toString().toStdString() << std::endl;
+        for (const QQmlError& e : list) std::cerr << "[pboffice] QML: " << e.toString().toStdString() << std::endl;
         qml_warnings += list.size();
     });
-    engine.rootContext()->setContextProperty(QStringLiteral("bridge"), &notes);
+    if (store) engine.addImageProvider(QStringLiteral("mailimg"), new MailImageProvider(store.get()));   // the engine owns it
     engine.rootContext()->setContextProperty(QStringLiteral("device"), &device);
-    engine.rootContext()->setContextProperty(QStringLiteral("attachments"), &attachments);
     engine.rootContext()->setContextProperty(QStringLiteral("about"), &about);
-    engine.rootContext()->setContextProperty(QStringLiteral("clipboard"), &clipboard);
-    engine.rootContext()->setContextProperty(QStringLiteral("editSession"), &editSession);
-    engine.rootContext()->setContextProperty(QStringLiteral("slash"), &slash);
-    // Previews of the image files the file browser lists (spec 009); the shared index keeps its ids alive for the engine.
-    engine.addImageProvider(QStringLiteral("filepreview"), new FilePreviewProvider(attachments.previewIndex()));
-    if (notes.store())  // the engine owns the provider
-        engine.addImageProvider(QStringLiteral("attachment"), new AttachmentImageProvider(notes.store(), config.attachmentsDir));
-    // Desktop-only start options (PBNOTES_START_PAGE / PBNOTES_START_NOTE); both are always defined,
-    // empty/0 on the device, so the QML never depends on the platform.
-    QString start_page;
-    int start_note = 0;
-#ifndef PLATFORM_POCKETBOOK
-    start_page = qEnvironmentVariable("PBNOTES_START_PAGE");
-    start_note = qEnvironmentVariableIntValue("PBNOTES_START_NOTE");
-#endif
-    engine.rootContext()->setContextProperty(QStringLiteral("startPage"), start_page);
-    engine.rootContext()->setContextProperty(QStringLiteral("startNote"), start_note);
+    engine.rootContext()->setContextProperty(QStringLiteral("startupError"), startup_error);
+    if (store) {
+        engine.rootContext()->setContextProperty(QStringLiteral("account"), account.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("sync"), syncBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("messages"), messages.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("searchResults"), searchResults.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("folders"), folders.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("reader"), reader.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("attachments"), attachmentBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("agenda"), agendaModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("dayModel"), dayModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("monthModel"), monthModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("eventView"), eventBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("eventEdit"), eventEditBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("conflicts"), conflictsModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("settings"), settingsBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("home"), homeBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("timezone"), timezoneBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("compose"), composeBridge.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("outbox"), outboxModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("draftList"), draftsModel.get());
+    }
     engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));
     if (engine.rootObjects().isEmpty()) {
-        std::cerr << "[pbnotes] failed to load QML" << std::endl;
+        std::cerr << "[pboffice] failed to load QML" << std::endl;
         return 1;
     }
     if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first())) device.setWindow(window);
-
-    // Desktop verification: PBNOTES_QML_SHOT=<file.png> renders the window once and quits.
-    const QByteArray shot = qgetenv("PBNOTES_QML_SHOT");
-    if (!shot.isEmpty()) {
-        if (auto* w = qobject_cast<QQuickWindow*>(engine.rootObjects().first())) {
-            w->resize(qEnvironmentVariableIntValue("PBNOTES_SHOT_W") ? qEnvironmentVariableIntValue("PBNOTES_SHOT_W") : 1080,
-                      qEnvironmentVariableIntValue("PBNOTES_SHOT_H") ? qEnvironmentVariableIntValue("PBNOTES_SHOT_H") : 1335);
-            QTimer::singleShot(900, &app, [w, shot, &app]() {
-                w->grabWindow().save(QString::fromLocal8Bit(shot));
-                app.quit();
-            });
-        }
-    }
 
     if (self_test) {  // CTest: every page compiles and instantiates without QML errors
         QTimer::singleShot(300, &app, [&]() {
@@ -193,7 +350,7 @@ int main(int argc, char** argv) {
                 QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/qml/pages/") + name));
                 QObject* page = component.isError() ? nullptr : component.create();
                 if (!page) {
-                    std::cerr << "[pbnotes] page failed: " << name.toStdString() << " " << component.errorString().toStdString() << std::endl;
+                    std::cerr << "[pboffice] page failed: " << name.toStdString() << " " << component.errorString().toStdString() << std::endl;
                     ++failed;
                 }
                 delete page;
@@ -201,7 +358,7 @@ int main(int argc, char** argv) {
             // a blank screen (no page shown) is a failure too
             auto* window = engine.rootObjects().isEmpty() ? nullptr : engine.rootObjects().first();
             const bool shown = window && window->property("pageLoaded").toBool();
-            if (!shown) std::cerr << "[pbnotes] no page is shown" << std::endl;
+            if (!shown) std::cerr << "[pboffice] no page is shown" << std::endl;
             QTimer::singleShot(300, &app, [&, failed, shown]() { app.exit((failed == 0 && shown && qml_warnings == 0) ? 0 : 2); });
         });
     }

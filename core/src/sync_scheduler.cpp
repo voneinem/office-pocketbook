@@ -1,8 +1,8 @@
-#include "pbnotes/sync_scheduler.h"
+#include "pbo/sync_scheduler.h"
 
 #include <algorithm>
 
-namespace pbnotes {
+namespace pbo {
 
 void SyncScheduler::note_saved(int64_t now_ms) {
     armed_ = true;
@@ -53,4 +53,4 @@ SyncScheduler::Step SyncScheduler::next(int64_t now_ms, const Inputs& in) {
     return step;
 }
 
-}  // namespace pbnotes
+}  // namespace pbo

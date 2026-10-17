@@ -6,11 +6,11 @@
 
 #include <string>
 
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 #include "test_support.h"
 #include "tmp_dir.h"
 
-using namespace pbnotes::about;
+using namespace pbo::about;
 
 namespace {
 

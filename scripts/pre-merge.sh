@@ -38,7 +38,7 @@ secret_scan() {
         if grep -nE -e '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' \
                     -e 'Authorization:[[:space:]]*Basic[[:space:]]+[A-Za-z0-9+/=]{8,}' \
                     -e '(password|passwd|secret|api[_-]?key|token)[[:space:]]*[:=][[:space:]]*"[^"$<{][^"]{5,}"' \
-                    "$p" | grep -vE '(example|placeholder|REDACTED|<|\$\{)' | sed "s#^#SECRET $f:#" | grep .; then
+                    "$p" | grep -vE '(example|placeholder|REDACTED|<|\$\{|"[[:space:]]*\+[[:space:]])' | sed "s#^#SECRET $f:#" | grep .; then
             bad=1
         fi
     done < <(if [ -d "$root/.git" ]; then git -C "$root" ls-files -z --cached --others --exclude-standard; else (cd "$root" && find . -type f -not -path './.git/*' -print0 | sed -z 's#^\./##'); fi)
@@ -61,6 +61,7 @@ if [ "${1:-}" = "--self-test" ]; then
     printf 'Authorization: Basic YWxpY2U6cHdzZWNyZXQ=\n' > "$tmp/h.txt"; check fail "basic auth header"; rm "$tmp/h.txt"
     printf 'const char* password = "hunter2hunter2";\n' > "$tmp/p.cpp"; check fail "hard-coded password"; rm "$tmp/p.cpp"
     printf 'password = "<your app password>"\n' > "$tmp/ok.txt"; check pass "placeholder password is fine"; rm "$tmp/ok.txt"
+    printf 'text += "mail_password=" + escape(value) + "\\n";\n' > "$tmp/c.cpp"; check pass "a key name joined to a variable is code, not a secret"; rm "$tmp/c.cpp"
     exit $fail
 fi
 

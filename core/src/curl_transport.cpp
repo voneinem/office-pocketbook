@@ -1,6 +1,8 @@
-#include "pbnotes/curl_transport.h"
+#include "pbo/curl_transport.h"
 
 #include <curl/curl.h>
+
+#include "pbo/curl_session.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -12,7 +14,7 @@
 #include <cstdlib>
 #include <mutex>
 
-namespace pbnotes {
+namespace pbo {
 
 namespace {
 
@@ -32,6 +34,7 @@ struct Transfer {
     // file sink (Request::save_body_to)
     std::string save_to;
     long long max_bytes = 0;
+    long long max_memory = 0;   // cap for an in-memory body, 0 = none
     FILE* file = nullptr;
     long status = 0;       // status of the response block being received (redirects start new blocks)
     long long total = 0;   // body bytes of a 2xx answer received so far
@@ -45,6 +48,10 @@ size_t write_body(char* data, size_t size, size_t nmemb, void* userdata) {
     auto* t = static_cast<Transfer*>(userdata);
     const size_t n = size * nmemb;
     if (!t->to_file()) {
+        if (t->max_memory > 0 && static_cast<long long>(t->body->size() + n) > t->max_memory) {
+            t->too_large = true;
+            return 0;  // aborts the transfer
+        }
         t->body->append(data, n);
         return n;
     }
@@ -90,38 +97,14 @@ size_t write_header(char* data, size_t size, size_t nmemb, void* userdata) {
                 t->too_large = true;
                 return 0;
             }
+            if (!t->to_file() && t->max_memory > 0 && iequals(name, "Content-Length") && std::atoll(value.c_str()) > t->max_memory) {
+                t->too_large = true;
+                return 0;
+            }
             headers->emplace_back(std::move(name), std::move(value));
         }
     }
     return total;
-}
-
-bool is_https_url(const std::string& url) {
-    static const char kScheme[] = "https://";
-    if (url.size() < sizeof(kScheme) - 1) return false;
-    for (size_t i = 0; i < sizeof(kScheme) - 1; ++i)
-        if (std::tolower(static_cast<unsigned char>(url[i])) != kScheme[i]) return false;
-    return true;
-}
-
-ErrorClass classify_curl_error(CURLcode code) {
-    switch (code) {
-        case CURLE_PEER_FAILED_VERIFICATION:
-        case CURLE_SSL_CONNECT_ERROR:
-        case CURLE_SSL_CERTPROBLEM:
-        case CURLE_SSL_CIPHER:
-        case CURLE_SSL_CACERT_BADFILE:
-        case CURLE_SSL_ISSUER_ERROR:
-        case CURLE_SSL_INVALIDCERTSTATUS:
-        case CURLE_UNSUPPORTED_PROTOCOL:  // e.g. a redirect to http://
-            return ErrorClass::Tls;
-        case CURLE_TOO_MANY_REDIRECTS:
-        case CURLE_URL_MALFORMAT:
-        case CURLE_BAD_CONTENT_ENCODING:
-            return ErrorClass::Server;
-        default:
-            return ErrorClass::Network;
-    }
 }
 
 }  // namespace
@@ -132,8 +115,9 @@ CurlTransport::CurlTransport(std::string ca_file) : ca_file_(std::move(ca_file))
 
 Response CurlTransport::perform(const Request& request) {
     Response out;
-    if (!is_https_url(request.url)) {
+    if (!check_url_scheme(Protocol::Http, Security::Tls, request.url).ok()) {
         out.error = ErrorClass::Tls;
+        out.error_key = "scheme_not_allowed";
         out.error_detail = "refusing a non-https URL";
         return out;
     }
@@ -160,20 +144,20 @@ Response CurlTransport::perform(const Request& request) {
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, request.connect_timeout_s);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, request.total_timeout_s);
     curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
 
-    // TLS: verification is mandatory and not configurable.
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
-    curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file_.c_str());
-    curl_easy_setopt(curl, CURLOPT_SSLVERSION, static_cast<long>(CURL_SSLVERSION_TLSv1_2));
-    curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "https");
-    curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "https");
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
+    // TLS: verification is mandatory and not configurable; the whole policy lives in curl_session.
+    if (!apply_tls_policy(curl, ca_file_, Protocol::Http, Security::Tls).ok()) {
+        out.error = ErrorClass::Tls;
+        out.error_key = "no_ca_file";
+        out.error_detail = "no certificate authority file";
+        curl_slist_free_all(header_list);
+        curl_easy_cleanup(curl);
+        return out;
+    }
+    // The timeouts of the request replace the session defaults for this call.
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, request.connect_timeout_s);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, request.total_timeout_s);
 
     if (!request.username.empty() || !request.password.empty()) {
         curl_easy_setopt(curl, CURLOPT_HTTPAUTH, static_cast<long>(CURLAUTH_BASIC));
@@ -199,6 +183,8 @@ Response CurlTransport::perform(const Request& request) {
         if (!request.body.empty() || request.method == "POST" || request.method == "PUT") {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.data());
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
+            // a redirect (also 301/302/303) keeps method and body: a PROPFIND to /.well-known/caldav must stay a PROPFIND
+            curl_easy_setopt(curl, CURLOPT_POSTREDIR, static_cast<long>(CURL_REDIR_POST_ALL));
         }
     }
 
@@ -210,6 +196,7 @@ Response CurlTransport::perform(const Request& request) {
     if (request.method != "HEAD") {
         transfer.save_to = request.save_body_to;
         transfer.max_bytes = request.max_body_bytes;
+        transfer.max_memory = request.max_response_bytes;
     }
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_body);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &transfer);
@@ -245,10 +232,14 @@ Response CurlTransport::perform(const Request& request) {
         out.headers = std::move(headers);
         out.body = std::move(body);
     } else {
-        out.error = classify_curl_error(rc);
-        // Only the generic curl description: curl's own error buffer can contain the host name.
+        long verify_result = 0;
+        curl_easy_getinfo(curl, CURLINFO_SSL_VERIFYRESULT, &verify_result);
+        // Only the fixed text of the mapper: curl's own error buffer can contain the host name (FR-041).
         (void)errbuf;
-        out.error_detail = "curl " + std::to_string(static_cast<int>(rc)) + ": " + curl_easy_strerror(rc);
+        const Error mapped = map_curl_error(rc, verify_result, true);
+        out.error = mapped.cls;
+        out.error_key = mapped.key;
+        out.error_detail = mapped.detail;
     }
     curl_slist_free_all(header_list);
     curl_easy_cleanup(curl);
@@ -256,4 +247,4 @@ Response CurlTransport::perform(const Request& request) {
     return out;
 }
 
-}  // namespace pbnotes
+}  // namespace pbo

@@ -1,11 +1,11 @@
 // US2 (spec 002 FR-012, research R-11): the reader's page step that never cuts an unsplittable block.
 #include <vector>
 
-#include "pbnotes/paging.h"
+#include "pbo/paging.h"
 #include "test_support.h"
 
-using pbnotes::Interval;
-using pbnotes::page_target;
+using pbo::Interval;
+using pbo::page_target;
 
 namespace {
 const std::vector<Interval> none;

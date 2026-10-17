@@ -1,0 +1,11 @@
+From: Anna Beispiel <anna@example.org>
+To: Alice <alice@example.org>
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+Message-ID: <b64@example.org>
+Subject: Base64
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+R3LDvMOfZSBhdXMgS8O2bG4uIEVpbiBTYXR6IG1pdCBVbWxhdXRlbjogw6TDtsO8w58g4oKsIPCf
+k6cK

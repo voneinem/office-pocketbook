@@ -2,17 +2,17 @@
 // Needs the `openssl` CLI (skipped otherwise).
 #include <string>
 
-#include "pbnotes/curl_transport.h"
+#include "pbo/curl_transport.h"
 #include "test_support.h"
 #include "tls_test_server.h"
 
-using pbnotes::CurlTransport;
-using pbnotes::ErrorClass;
-using pbnotes::Request;
+using pbo::CurlTransport;
+using pbo::ErrorClass;
+using pbo::Request;
 using pbtest::TlsTestServer;
 
 namespace {
-std::string bundled_ca() { return std::string(PBNOTES_SOURCE_DIR) + "/third_party/cacert/cacert.pem"; }
+std::string bundled_ca() { return std::string(PBO_SOURCE_DIR) + "/third_party/cacert/cacert.pem"; }
 TlsTestServer::Handler ok_handler() {
     return [](const std::string&) { return TlsTestServer::http_response(200, "{\"ok\":true}"); };
 }

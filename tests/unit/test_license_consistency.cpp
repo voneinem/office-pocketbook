@@ -9,7 +9,7 @@
 #include <string>
 
 #include "license_check.h"
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 #include "test_support.h"
 
 using namespace licensecheck;
@@ -19,7 +19,7 @@ namespace {
 const std::string kDashes(80, '-');
 
 const char* kManifest =
-    "id: pbnotes\nkind: app\nname: Notes Pocketbook\nlicense: MIT License\nholder: Jane Author\n"
+    "id: pboffice\nkind: app\nname: PB Office\nlicense: MIT License\nholder: Jane Author\n"
     "copyright: Copyright (c) 2026 Jane Author\ntext: LICENSE\n\n"
     "id: sqlite\nkind: component\nname: SQLite\npurpose: Stores notes\nlicense: Public domain\nholder: The authors\n"
     "url: https://www.sqlite.org/\norigin: bundled\nsource: third_party/sqlite\n\n"
@@ -29,7 +29,7 @@ const char* kManifest =
 // A repository in which every rule holds.
 Inputs good() {
     Inputs in;
-    in.manifest = pbnotes::about::parse_manifest(kManifest);
+    in.manifest = pbo::about::parse_manifest(kManifest);
     in.notice = "Intro text\n\n" + kDashes + "\nSQLite (public domain)\nbody\n\n" + kDashes + "\nQt 6.8 (LGPL-3.0)\nbody\n";
     in.third_party_dirs = {"sqlite"};
     in.cmake_names = {"Qt6"};
@@ -95,8 +95,8 @@ PB_TEST(rule_3_scraping_reads_find_package_and_linked_libraries) {
     const std::string cmake =
         "find_package(CURL REQUIRED)\n"
         "find_package(Qt6 QUIET COMPONENTS Core Gui)\n"
-        "target_link_libraries(app PRIVATE pbnotes_bridge ${LIBS} Qt6::Core pthread inkview m)\n"
-        "target_link_libraries(notes_core PUBLIC pbnotes_sqlite CURL::libcurl)\n";
+        "target_link_libraries(app PRIVATE pbo_bridge ${LIBS} Qt6::Core pthread inkview m)\n"
+        "target_link_libraries(office_core PUBLIC pbo_sqlite CURL::libcurl)\n";
     auto names = scrape_cmake_names(cmake);
     std::sort(names.begin(), names.end());
     names.erase(std::unique(names.begin(), names.end()), names.end());
@@ -151,9 +151,9 @@ PB_TEST(rule_6_bad_blocks_missing_app_and_unreadable_manifest) {
 
 PB_TEST(the_real_repository_is_consistent) {
     namespace fs = std::filesystem;
-    const std::string root = PBNOTES_SOURCE_DIR;
+    const std::string root = PBO_SOURCE_DIR;
     Inputs in;
-    in.manifest = pbnotes::about::load_manifest(root);
+    in.manifest = pbo::about::load_manifest(root);
     in.notice = read_file(root + "/NOTICE");
     in.license_file = read_file(root + "/LICENSE");
     for (const auto& e : fs::directory_iterator(root + "/third_party")) {

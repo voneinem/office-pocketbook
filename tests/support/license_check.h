@@ -12,12 +12,12 @@
 #include <string_view>
 #include <vector>
 
-#include "pbnotes/about.h"
+#include "pbo/about.h"
 
 namespace licensecheck {
 
 struct Inputs {
-    pbnotes::about::Manifest manifest;
+    pbo::about::Manifest manifest;
     std::string notice;                         // contents of NOTICE
     std::vector<std::string> third_party_dirs;  // names of the directories directly under third_party/
     std::vector<std::string> cmake_names;       // dependency names scraped from the CMake files
@@ -76,11 +76,11 @@ inline std::vector<std::string> scrape_cmake_names(const std::string& cmake) {
     for (const auto& w : call_args("find_package")) {
         if (!w.empty()) out.push_back(w[0]);
     }
-    const std::set<std::string> keywords = {"PRIVATE", "PUBLIC", "INTERFACE", "pthread", "m", "notes_core"};
+    const std::set<std::string> keywords = {"PRIVATE", "PUBLIC", "INTERFACE", "pthread", "m", "office_core"};
     for (const auto& w : call_args("target_link_libraries")) {
         for (size_t i = 1; i < w.size(); ++i) {
             const std::string& t = w[i];
-            if (keywords.count(t) || t.compare(0, 2, "${") == 0 || t.compare(0, 8, "pbnotes_") == 0) continue;
+            if (keywords.count(t) || t.compare(0, 2, "${") == 0 || t.compare(0, 4, "pbo_") == 0) continue;
             size_t colons = t.find("::");
             out.push_back(colons == std::string::npos ? t : t.substr(0, colons));
         }
@@ -116,7 +116,7 @@ inline std::vector<std::string> check_consistency(const Inputs& in) {
     }
     for (const std::string& h : headings) {
         bool found = std::any_of(m.components.begin(), m.components.end(),
-                                 [&](const pbnotes::about::Entry& c) { return starts_with(h, c.name); });
+                                 [&](const pbo::about::Entry& c) { return starts_with(h, c.name); });
         if (!found) f.push_back("rule 1: NOTICE section '" + h + "' has no manifest entry");
     }
 
@@ -138,7 +138,7 @@ inline std::vector<std::string> check_consistency(const Inputs& in) {
     }
 
     // rule 4: named files exist; texts are non-empty and within the cap
-    auto check_entry_files = [&](const pbnotes::about::Entry& e) {
+    auto check_entry_files = [&](const pbo::about::Entry& e) {
         for (const std::string& t : e.text) {
             long size = in.size_of(t);
             if (size < 0) f.push_back("rule 4: '" + e.name + "': text file missing: " + t);

@@ -1,0 +1,9 @@
+* LIST (\HasNoChildren) "/" "INBOX"
+* LIST (\HasNoChildren \Sent) "/" "Sent"
+* LIST (\HasNoChildren \Drafts) "/" "Drafts"
+* LIST (\HasChildren) "/" "Projekte"
+* LIST (\HasNoChildren) "/" "Projekte/Planung"
+* LIST (\HasNoChildren) "/" {12}
+Entw&APw-rfe
+* LIST (\Noselect \HasChildren) "." "Shared"
+* LIST () NIL Weird

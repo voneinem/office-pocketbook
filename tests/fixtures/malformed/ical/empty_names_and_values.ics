@@ -1,0 +1,12 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//example.org//malformed//EN
+BEGIN:VEVENT
+UID:m1@example.org
+:
+;;;:x
+SUMMARY:
+DTSTART:
+X-:
+END:VEVENT
+END:VCALENDAR

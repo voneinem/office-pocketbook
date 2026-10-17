@@ -33,7 +33,7 @@ def inside_round_rect(x, y, x0, y0, x1, y1, r):
     return (x - cx) ** 2 + (y - cy) ** 2 <= R * R
 
 def draw():
-    """The notes glyph, no frame: a page outline (3 px, rounded corners), a header strip and four text lines.
+    """The mail glyph, no frame: a page outline (3 px, rounded corners), a header strip and four text lines.
     The built-in icons of the reader are line art of about 75-90 px in a 122 px cell; this one is 76 x 92."""
     px = canvas()
     x0, y0, x1, y1, t, r = 23, 15, 99, 107, 3, 12
@@ -78,7 +78,7 @@ def write_bmp(path, px):
 
 out = sys.argv[1]
 glyph = draw()
-write_bmp(out + "/pbnotes.bmp", down(glyph, False))   # black on white
-write_bmp(out + "/pbnotes_f.bmp", down(glyph, True))  # focused: inverted
+write_bmp(out + "/pboffice.bmp", down(glyph, False))   # black on white
+write_bmp(out + "/pboffice_f.bmp", down(glyph, True))  # focused: inverted
 PY
-echo "wrote $OUT/pbnotes.bmp and $OUT/pbnotes_f.bmp"
+echo "wrote $OUT/pboffice.bmp and $OUT/pboffice_f.bmp"

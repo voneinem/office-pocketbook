@@ -31,7 +31,7 @@ class TestPki {
 public:
     explicit TestPki(const TmpDir& dir, const std::string& ca_name = "ca") : dir_(dir), ca_name_(ca_name) {
         available_ = run("openssl version") &&
-                     run("openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=pbnotes-test-" + ca_name +
+                     run("openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=pbo-test-" + ca_name +
                          " -keyout " + dir.file(ca_name + ".key") + " -out " + dir.file(ca_name + ".pem") +
                          " -addext basicConstraints=critical,CA:TRUE" + " -addext keyUsage=critical,keyCertSign,cRLSign");
     }

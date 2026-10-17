@@ -1,0 +1,28 @@
+From: Anna Beispiel <anna@example.org>
+To: Alice <alice@example.org>
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+Message-ID: <att@example.org>
+Subject: With attachments
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY-MIX"
+
+--BOUNDARY-MIX
+Content-Type: text/plain; charset=utf-8
+
+Please find the documents attached.
+--BOUNDARY-MIX
+Content-Type: application/pdf; name="report.pdf"
+Content-Disposition: attachment; filename="report.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQgZmFrZSBwZGYgY29udGVudCBmb3IgdGVzdHMgb25seQolUERGLTEuNCBmYWtlIHBk
+ZiBjb250ZW50IGZvciB0ZXN0cyBvbmx5CiVQREYtMS40IGZha2UgcGRmIGNvbnRlbnQgZm9yIHRl
+c3RzIG9ubHkK
+--BOUNDARY-MIX
+Content-Type: image/png
+Content-Disposition: attachment; filename*0*=UTF-8''gr%C3%BC; filename*1*=%C3%9Fe.png
+Content-Transfer-Encoding: base64
+
+AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4
+OTo7PD0+Pw==
+--BOUNDARY-MIX--

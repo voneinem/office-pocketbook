@@ -1,0 +1,16 @@
+From: Anna Beispiel <anna@example.org>
+To: Alice <alice@example.org>
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+Message-ID: <plain@example.org>
+Subject: Plain text
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
+
+Hello Alice,
+
+this is a plain message.
+Second line.
+
+Bye
+Anna

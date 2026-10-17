@@ -10,6 +10,9 @@
 #      a tool of a bottom panel, a footer button of a dialog or a tappable row).
 #   U2 No `bordered:` property (the switch that drew a border round a text button).
 #   U3 No Qt Quick Controls `Button { ... }` (its own bevel and border read as a grey bar on the panel).
+#   U4 No `source:` set to a literal http(s)/ftp address (no remote content is ever loaded, FR-009).
+#   U5 No `import QtWebView` / `import QtWebEngine` (mail and event text is shown as plain text).
+#   U6 No `Qt.openUrlExternally` (links are shown as text and never opened).
 set -u
 
 SELF="$(basename "${BASH_SOURCE[0]}")"
@@ -25,6 +28,12 @@ scan() {
             if [ -n "$hits" ]; then echo "U2 $f: bordered property"; echo "$hits" | sed 's/^/    /'; bad=1; fi
             hits="$(grep -nE '(^|[^A-Za-z_.])Button[[:space:]]*\{' "$f" || true)"
             if [ -n "$hits" ]; then echo "U3 $f: Qt Quick Controls Button"; echo "$hits" | sed 's/^/    /'; bad=1; fi
+            hits="$(grep -nE '(^|[^A-Za-z_.])source[[:space:]]*:[[:space:]]*["'"'"'](https?|ftp)://' "$f" || true)"
+            if [ -n "$hits" ]; then echo "U4 $f: remote image source"; echo "$hits" | sed 's/^/    /'; bad=1; fi
+            hits="$(grep -nE '^[[:space:]]*import[[:space:]]+(QtWebView|QtWebEngine)' "$f" || true)"
+            if [ -n "$hits" ]; then echo "U5 $f: web view import"; echo "$hits" | sed 's/^/    /'; bad=1; fi
+            hits="$(grep -nE 'Qt\.openUrlExternally' "$f" || true)"
+            if [ -n "$hits" ]; then echo "U6 $f: Qt.openUrlExternally"; echo "$hits" | sed 's/^/    /'; bad=1; fi
             ;;
         esac
     done < <(find "$root/qml" -type f \( -name '*.qml' -o -name qmldir -o -name qml.qrc \) -print0)
@@ -43,12 +52,18 @@ self_test() {
     scan "$tmp/good" >/dev/null || { echo "self-test: a clean tree was reported" >&2; rc=1; }
     # each bad pattern is found
     for case_ in "U1:Item { InkButton { text: \"x\" } }" "U2:Item { property bool bordered: true }" "U3:import QtQuick.Controls
-Button { text: \"x\" }" ; do
+Button { text: \"x\" }" \
+        "U4:Image { source: \"https://example.org/a.png\" }" "U4:AnimatedImage { source : 'http://example.org/a.gif' }" \
+        "U5:import QtWebView" "U5:import QtWebEngine 1.0" "U6:MouseArea { onClicked: Qt.openUrlExternally(link) }" ; do
         mk bad
         printf 'import QtQuick\n%s\n' "${case_#*:}" > "$tmp/bad/qml/B.qml"
         if scan "$tmp/bad" >/dev/null; then echo "self-test: ${case_%%:*} was not detected" >&2; rc=1; fi
         rm -rf "$tmp/bad"
     done
+    # local image sources and ordinary text pass
+    mk good2
+    printf 'import QtQuick\nItem { Image { source: "qrc:/icons/a.png" } Text { text: "see https://example.org" } }\n' > "$tmp/good2/qml/C.qml"
+    scan "$tmp/good2" >/dev/null || { echo "self-test: a local image source or URL text was reported" >&2; rc=1; }
     # the qmldir and the resource list are scanned too
     mk bad2
     printf 'InkButton 1.0 InkButton.qml\n' > "$tmp/bad2/qml/qmldir"

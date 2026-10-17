@@ -2,13 +2,13 @@
 // refused, and no Authorization header reaches the server. Needs the `openssl` CLI.
 #include <string>
 
-#include "pbnotes/curl_transport.h"
+#include "pbo/curl_transport.h"
 #include "test_support.h"
 #include "tls_test_server.h"
 
-using pbnotes::CurlTransport;
-using pbnotes::ErrorClass;
-using pbnotes::Request;
+using pbo::CurlTransport;
+using pbo::ErrorClass;
+using pbo::Request;
 using pbtest::TlsTestServer;
 
 namespace {

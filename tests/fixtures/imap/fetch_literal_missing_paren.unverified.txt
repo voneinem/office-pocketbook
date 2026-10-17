@@ -1,0 +1,7 @@
+* 1 FETCH (UID 101 FLAGS (\Seen \Flagged) INTERNALDATE "05-Oct-2026 10:00:01 +0000" RFC822.SIZE 812 BODY[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)] {160}
+From: Anna Beispiel <anna@example.org>
+To: alice@example.org
+Subject: Planung Oktober
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+Message-ID: <a1@example.org>
+

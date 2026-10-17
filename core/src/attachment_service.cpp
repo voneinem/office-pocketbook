@@ -1,218 +1,220 @@
-#include "pbnotes/attachment_service.h"
+#include "pbo/attachment_service.h"
 
-#include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
-
-#include <cerrno>
-#include <cstdio>
 #include <unistd.h>
 
-#include <ctime>
-#include <set>
+#include <cctype>
+#include <cerrno>
 
-#include "pbnotes/api_client.h"
-#include "pbnotes/attachment_ref.h"
-#include "pbnotes/log.h"
+#include "pbo/log.h"
+#include "pbo/mime.h"
 
-namespace pbnotes {
-
-AttachmentService::AttachmentService(NoteStore& store, HttpTransport& transport, std::string attachments_dir, Clock clock)
-    : store_(store), transport_(transport), dir_(std::move(attachments_dir)), clock_(std::move(clock)) {
-    if (!clock_) clock_ = [] { return static_cast<int64_t>(std::time(nullptr)); };
-    ::mkdir(dir_.c_str(), 0755);
-}
+namespace pbo {
 
 namespace {
 
-AttachmentService::DownloadResult failed(NoteStore& store, int64_t row_id, const std::string& key,
-                                         ErrorClass transport_error = ErrorClass::None) {
-    store.set_attachment_error(row_id, 0, "", key);
-    AttachmentService::DownloadResult r;
-    r.error_key = key;
-    r.transport_error = transport_error;
-    return r;
+int b64v(char c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
 }
 
-}  // namespace
-
-AttachmentService::DownloadResult AttachmentService::download(int64_t note_local_id, const std::string& remote_path) {
-    DownloadResult result;
-    auto account = store_.get_account();
-    auto note = store_.get(note_local_id);
-    auto row = store_.ensure_attachment(note_local_id, remote_path);
-    if (!account || !note || !row) {
-        result.error_key = "not_found";
-        return result;
-    }
-    if (!supports_attachments(account->api_versions)) return failed(store_, row->id, "unsupported_server");
-    if (!note->remote_id) return failed(store_, row->id, "not_found");  // a note the server does not know has no attachments there
-
-    const std::string part = path_of(std::to_string(row->id) + ".part");
-    ApiClient api(transport_, {account->server_url, account->username, account->password});
-    const AttachmentFetchResult fetched = api.download_attachment(*note->remote_id, remote_path, part, kMaxAttachmentBytes);
-    if (fetched.error != ErrorClass::None) {
-        std::remove(part.c_str());
-        const bool credentials = fetched.error == ErrorClass::Auth;
-        log::event("attachment.download", {log::text("result", credentials ? "rejected" : "network")});
-        return failed(store_, row->id, credentials ? "rejected" : "network", fetched.error);
-    }
-    const char* failure = fetched.too_large ? "too_large"
-                          : fetched.storage_full ? "storage_full"
-                          : fetched.not_found ? "not_found"
-                          : fetched.unsupported ? "unsupported_server"
-                          : fetched.rejected || !fetched.size ? "rejected"
-                                                              : nullptr;
-    if (failure) {
-        std::remove(part.c_str());
-        log::event("attachment.download", {log::text("result", failure)});
-        return failed(store_, row->id, failure);
-    }
-
-    const std::string ext = safe_extension(remote_path);
-    const std::string final_name = std::to_string(row->id) + (ext.empty() ? "" : "." + ext);
-    if (std::rename(part.c_str(), path_of(final_name).c_str()) != 0) {
-        const bool full = errno == ENOSPC || errno == EDQUOT;
-        std::remove(part.c_str());
-        return failed(store_, row->id, full ? "storage_full" : "rejected");
-    }
-    if (!store_.record_downloaded(note_local_id, remote_path, *fetched.size, final_name)) {
-        std::remove(path_of(final_name).c_str());
-        return failed(store_, row->id, "rejected");
-    }
-    log::event("attachment.download", {log::text("result", "ok"), log::count("bytes", *fetched.size)});
-    result.ok = true;
-    return result;
+int hexv(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
 }
 
-AddResult AttachmentService::add(const std::string& source_path) {
-    AddResult result;
-    auto fail = [&](const char* key) {
-        result.ok = false;
-        result.error_key = key;
-        return result;
-    };
+// Decodes the transfer encoding while the data arrives and writes the result to a file, counting decoded bytes against the limit.
+class DecodingFileSink : public ByteSink {
+public:
+    enum class Mode { Identity, Base64, QuotedPrintable };
+
+    DecodingFileSink(int fd, Mode mode, uint64_t limit) : fd_(fd), mode_(mode), limit_(limit) {}
+
+    bool write(const char* data, size_t n) override {
+        std::string out;
+        out.reserve(n);
+        switch (mode_) {
+            case Mode::Identity: out.assign(data, n); break;
+            case Mode::Base64: base64(data, n, &out); break;
+            case Mode::QuotedPrintable: qp(data, n, &out); break;
+        }
+        return emit(out);
+    }
+
+    // Flushes what a split encoded sequence still held; false if the file could not be written.
+    bool finish() {
+        std::string out(pending_);
+        pending_.clear();
+        return emit(out);
+    }
+
+    bool too_large() const { return too_large_; }
+    int write_errno() const { return errno_; }
+
+private:
+    bool emit(const std::string& out) {
+        if (decoded_ + out.size() > limit_) {   // the announced size was wrong, or the part is simply too big
+            too_large_ = true;
+            return false;
+        }
+        size_t off = 0;
+        while (off < out.size()) {
+            const ssize_t w = ::write(fd_, out.data() + off, out.size() - off);
+            if (w < 0) {
+                if (errno == EINTR) continue;
+                errno_ = errno;
+                return false;
+            }
+            off += static_cast<size_t>(w);
+        }
+        decoded_ += out.size();
+        return true;
+    }
+
+    void base64(const char* data, size_t n, std::string* out) {
+        for (size_t i = 0; i < n; ++i) {
+            const int v = b64v(data[i]);
+            if (v < 0) continue;   // line breaks, padding and anything else outside the alphabet
+            acc_ = (acc_ << 6) | static_cast<uint32_t>(v);
+            bits_ += 6;
+            if (bits_ >= 8) {
+                bits_ -= 8;
+                *out += static_cast<char>((acc_ >> bits_) & 0xFF);
+            }
+        }
+    }
+
+    void qp(const char* data, size_t n, std::string* out) {
+        std::string in = pending_ + std::string(data, n);
+        pending_.clear();
+        for (size_t i = 0; i < in.size(); ++i) {
+            if (in[i] != '=') { *out += in[i]; continue; }
+            // an escape needs two more characters (or a line break); if they have not arrived yet, wait for them
+            if (i + 1 >= in.size()) { pending_ = in.substr(i); return; }
+            if (in[i + 1] == '\n') { ++i; continue; }
+            if (in[i + 1] == '\r') {
+                if (i + 2 >= in.size()) { pending_ = in.substr(i); return; }
+                i += in[i + 2] == '\n' ? 2 : 1;
+                continue;
+            }
+            if (i + 2 >= in.size()) { pending_ = in.substr(i); return; }
+            const int h = hexv(in[i + 1]), l = hexv(in[i + 2]);
+            if (h >= 0 && l >= 0) { *out += static_cast<char>(h * 16 + l); i += 2; }
+            else *out += '=';
+        }
+    }
+
+    int fd_;
+    Mode mode_;
+    uint64_t limit_, decoded_ = 0;
+    uint32_t acc_ = 0;
+    int bits_ = 0;
+    std::string pending_;
+    bool too_large_ = false;
+    int errno_ = 0;
+};
+
+std::string lower(std::string s) {
+    for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return s;
+}
+
+bool file_exists(const std::string& path) {
     struct stat st;
-    if (source_path.empty() || ::stat(source_path.c_str(), &st) != 0 || !S_ISREG(st.st_mode) ||
-        ::access(source_path.c_str(), R_OK) != 0)
-        return fail("unreadable");
-    if (st.st_size > kMaxAttachmentBytes) return fail("too_large");
-    const std::string name = attachment_file_name(source_path);
-    if (name.empty()) return fail("unreadable");
-
-    auto row = store_.stage_attachment(name, clock_());
-    if (!row) return fail("storage_full");
-    const std::string part = path_of(std::to_string(row->id) + ".part");
-    const std::string ext = safe_extension(name);
-    const std::string final_name = std::to_string(row->id) + (ext.empty() ? "" : "." + ext);
-    auto cleanup = [&]() {
-        std::remove(part.c_str());
-        std::remove(path_of(final_name).c_str());
-        store_.drop_staged(row->id);
-    };
-
-    FILE* in = std::fopen(source_path.c_str(), "rb");  // read only: the original is never touched
-    if (!in) {
-        cleanup();
-        return fail("unreadable");
-    }
-    FILE* out = std::fopen(part.c_str(), "wb");
-    if (!out) {
-        const bool full = errno == ENOSPC || errno == EDQUOT;
-        std::fclose(in);
-        cleanup();
-        return fail(full ? "storage_full" : "unreadable");
-    }
-    const char* failure = nullptr;
-    int64_t total = 0;
-    char buffer[64 * 1024];
-    for (;;) {
-        const size_t n = std::fread(buffer, 1, sizeof buffer, in);
-        if (n == 0) {
-            if (std::ferror(in)) failure = "unreadable";
-            break;
-        }
-        total += static_cast<int64_t>(n);
-        if (total > kMaxAttachmentBytes) { failure = "too_large"; break; }  // the file grew while it was read
-        if (fail_copy_after_ >= 0 && total > fail_copy_after_) { failure = "storage_full"; break; }
-        if (std::fwrite(buffer, 1, n, out) != n) {
-            failure = errno == ENOSPC || errno == EDQUOT ? "storage_full" : "unreadable";
-            break;
-        }
-    }
-    std::fclose(in);
-    if (std::fclose(out) != 0 && !failure) failure = "storage_full";  // the final flush failed
-    if (failure) {
-        cleanup();
-        return fail(failure);
-    }
-    if (std::rename(part.c_str(), path_of(final_name).c_str()) != 0 || !store_.set_staged_file(row->id, total, final_name)) {
-        const bool full = errno == ENOSPC || errno == EDQUOT;
-        cleanup();
-        return fail(full ? "storage_full" : "unreadable");
-    }
-    log::event("attachment.add", {log::text("result", "ok"), log::count("bytes", total)});
-    result.ok = true;
-    result.id = row->id;
-    result.display_name = row->display_name;
-    result.size = total;
-    result.token = make_token(row->id, row->display_name);
-    return result;
-}
-
-std::optional<int64_t> AttachmentService::probe_size(int64_t note_local_id, const std::string& remote_path) {
-    if (auto row = store_.attachment_for(note_local_id, remote_path))
-        if (row->size) return row->size;
-    auto account = store_.get_account();
-    auto note = store_.get(note_local_id);
-    if (!account || !note || !note->remote_id || !supports_attachments(account->api_versions)) return std::nullopt;
-    ApiClient api(transport_, {account->server_url, account->username, account->password});
-    const AttachmentProbeResult probe = api.probe_attachment(*note->remote_id, remote_path);
-    if (probe.not_found) {
-        store_.set_attachment_error(0, note_local_id, remote_path, "not_found");
-        return std::nullopt;
-    }
-    if (probe.error != ErrorClass::None || !probe.size) return std::nullopt;
-    if (!store_.record_size(note_local_id, remote_path, *probe.size)) return std::nullopt;
-    return probe.size;
-}
-
-namespace {
-
-// "<digits>" or "<digits>.<ext>" with ext of 1-8 lower-case letters or digits: the names this service creates.
-bool is_stored_name(const std::string& name) {
-    size_t i = 0;
-    while (i < name.size() && name[i] >= '0' && name[i] <= '9') ++i;
-    if (i == 0) return false;
-    if (i == name.size()) return true;
-    if (name[i] != '.' || name.size() - i - 1 < 1 || name.size() - i - 1 > 8) return false;
-    for (size_t k = i + 1; k < name.size(); ++k)
-        if (!((name[k] >= 'a' && name[k] <= 'z') || (name[k] >= '0' && name[k] <= '9'))) return false;
-    return true;
+    return ::stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode);
 }
 
 }  // namespace
 
-void AttachmentService::purge(NoteStore& store, const std::string& directory, int64_t min_age_seconds) {
-    const std::vector<std::string> named = store.referenced_local_files();
-    const std::set<std::string> keep(named.begin(), named.end());
-    DIR* d = opendir(directory.c_str());
-    if (!d) return;
-    int removed = 0;
-    while (dirent* e = readdir(d)) {
-        const std::string name = e->d_name;
-        if (name == "." || name == "..") continue;
-        struct stat st;
-        const std::string full = directory + "/" + name;
-        if (::lstat(full.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) continue;  // only plain files, never links
-        if (min_age_seconds > 0 && std::time(nullptr) - st.st_mtime < min_age_seconds) continue;
-        const bool part = name.size() >= 5 && name.compare(name.size() - 5, 5, ".part") == 0;
-        if (!part && !is_stored_name(name)) continue;  // not one of ours: never delete what we did not create
-        if (part || !keep.count(name)) {
-            if (std::remove(full.c_str()) == 0) ++removed;
-        }
-    }
-    closedir(d);
-    if (removed > 0) log::event("attachment.purge", {log::count("removed", removed)});
+std::string attachment_save_name(const std::string& name, const std::string& mime_type) {
+    if (!name.empty()) return safe_file_name(name);
+    static const struct { const char* type; const char* ext; } kExt[] = {
+        {"application/pdf", ".pdf"}, {"image/png", ".png"}, {"image/jpeg", ".jpg"}, {"image/gif", ".gif"}, {"text/plain", ".txt"},
+        {"text/html", ".html"}, {"text/calendar", ".ics"}, {"application/zip", ".zip"}, {"message/rfc822", ".eml"}, {"application/msword", ".doc"},
+        {"application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"},
+        {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"},
+        {"application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"}, {"audio/mpeg", ".mp3"}, {"video/mp4", ".mp4"}};
+    const std::string type = lower(mime_type);
+    for (const auto& e : kExt)
+        if (type == e.type) return std::string("attachment") + e.ext;
+    return "attachment";
 }
 
-}  // namespace pbnotes
+Error download_attachment(ImapTransport& imap, Store& store, int64_t attachment_id, uint64_t limit_bytes, const std::string& downloads_dir) {
+    const auto ref = store.attachment(attachment_id);
+    if (!ref) return make_error(ErrorClass::Storage, "not_found", "no such attachment");
+    const StoredAttachment& a = ref->attachment;
+    if (a.state == "downloaded" && !a.saved_path.empty() && file_exists(a.saved_path)) return {};
+
+    if (a.size > 0 && static_cast<uint64_t>(a.size) > limit_bytes) {   // announced as too big: nothing is fetched
+        store.set_attachment_state(attachment_id, "remote", "too_large");
+        return make_error(ErrorClass::Server, "too_large", "the attachment is larger than the allowed size");
+    }
+
+    const std::string enc = lower(a.encoding);
+    DecodingFileSink::Mode mode = DecodingFileSink::Mode::Identity;
+    uint64_t max_encoded = limit_bytes + 4096;
+    if (enc == "base64") { mode = DecodingFileSink::Mode::Base64; max_encoded = limit_bytes + limit_bytes / 2 + 4096; }
+    else if (enc == "quoted-printable") { mode = DecodingFileSink::Mode::QuotedPrintable; max_encoded = limit_bytes * 3 + 4096; }
+
+    // the folder (one level is created, a missing parent is an error: the path is the owner's, not guessed)
+    if (::mkdir(downloads_dir.c_str(), 0755) != 0 && errno != EEXIST) {
+        log::event("attachment.write_failed", {log::count("errno", errno)});
+        return make_error(ErrorClass::Storage, "write_failed", "the Downloads folder is not usable");
+    }
+    // a hidden part file: a half-written file never shows up under its real name, also if the app is stopped in the middle
+    const std::string part = downloads_dir + "/.pbo-" + std::to_string(attachment_id) + ".part";
+    const int fd = ::open(part.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0) {
+        log::event("attachment.write_failed", {log::count("errno", errno)});
+        return make_error(ErrorClass::Storage, errno == ENOSPC ? "storage_full" : "write_failed", "the file could not be created");
+    }
+    DecodingFileSink sink(fd, mode, limit_bytes);
+    Error e = imap.fetch_to(ref->folder_raw_name, ref->uid, a.section, max_encoded, sink);
+    if (e.ok() && !sink.finish()) e = make_error(ErrorClass::Storage, "write_failed", "the file could not be written");
+    if (e.ok() && ::fsync(fd) != 0) e = make_error(ErrorClass::Storage, "write_failed", "the file could not be written");
+    ::close(fd);
+
+    if (sink.too_large()) e = make_error(ErrorClass::Server, "too_large", "the attachment is larger than the allowed size");
+    else if (!e.ok() && sink.write_errno() != 0) e = make_error(ErrorClass::Storage, sink.write_errno() == ENOSPC ? "storage_full" : "write_failed", "the file could not be written");
+
+    std::string final_path;
+    if (e.ok()) {
+        // the final name: the real one, or "name (n).ext"; an existing file is never replaced (O_EXCL claims the name)
+        const std::string name = attachment_save_name(a.name, a.mime_type);
+        const size_t dot = name.rfind('.');
+        const bool has_ext = dot != std::string::npos && dot > 0 && name.size() - dot <= 12;
+        const std::string stem = has_ext ? name.substr(0, dot) : name, ext = has_ext ? name.substr(dot) : std::string();
+        for (int n = 0; n < 1000 && final_path.empty(); ++n) {
+            const std::string candidate = downloads_dir + "/" + (n == 0 ? name : stem + " (" + std::to_string(n) + ")" + ext);
+            const int claim = ::open(candidate.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+            if (claim >= 0) {
+                ::close(claim);
+                if (::rename(part.c_str(), candidate.c_str()) == 0) final_path = candidate;
+                else ::unlink(candidate.c_str());
+                break;
+            }
+            if (errno != EEXIST) break;
+        }
+        if (final_path.empty()) e = make_error(ErrorClass::Storage, "write_failed", "the file could not be saved");
+    }
+    if (!e.ok()) {
+        ::unlink(part.c_str());   // no partial file stays behind
+        if (e.key == "too_large") store.set_attachment_state(attachment_id, "remote", "too_large");
+        else if (e.key == "not_found") store.set_attachment_state(attachment_id, "remote", "refused");   // the server no longer has it
+        log_failure("attachment.failed", e);
+        return e;
+    }
+    Error st = store.set_attachment_state(attachment_id, "downloaded", "", final_path);
+    if (!st.ok()) ::unlink(final_path.c_str());   // the row could not record it: do not leave a file nobody knows about
+    return st;
+}
+
+}  // namespace pbo

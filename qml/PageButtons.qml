@@ -38,7 +38,7 @@ Row {
     readonly property bool canUp: target && target.contentY > (target.originY || 0) + 1
     readonly property bool canDown: target && target.contentY < (target.originY || 0) + target.contentHeight - target.height - 1
 
-    IconButton { text: qsTr("Page up"); icon: "chevron-up"; enabled: bar.canUp; onClicked: bar.pageBy(-1) }
+    IconButton { objectName: "pageUp"; text: qsTr("Page up"); icon: "chevron-up"; enabled: bar.canUp; onClicked: bar.pageBy(-1) }
     Text {
         objectName: "pageIndicator"
         visible: bar.showIndicator
@@ -50,5 +50,5 @@ Row {
         color: Style.ink
         text: bar.pageNumber + " / " + bar.pageCount
     }
-    IconButton { text: qsTr("Page down"); icon: "chevron-down"; enabled: bar.canDown; onClicked: bar.pageBy(1) }
+    IconButton { objectName: "pageDown"; text: qsTr("Page down"); icon: "chevron-down"; enabled: bar.canDown; onClicked: bar.pageBy(1) }
 }

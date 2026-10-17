@@ -1,8 +1,9 @@
 # Host-only tests. Every tests/{unit,contract,integration}/test_*.cpp becomes its own
-# executable (linked with notes_core) registered with CTest and labelled by directory.
+# executable (linked with office_core) registered with CTest and labelled by directory.
 # Tests are written first and must fail before the implementation exists (Principle I).
+# tests/templates/ is NOT globbed: it keeps the baseline performance harness as a template for the budget tests.
 
-file(GLOB PBNOTES_TEST_SOURCES CONFIGURE_DEPENDS
+file(GLOB PBO_TEST_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/contract/test_*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_*.cpp)
@@ -11,86 +12,23 @@ file(GLOB PBNOTES_TEST_SOURCES CONFIGURE_DEPENDS
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
-foreach(src ${PBNOTES_TEST_SOURCES})
+foreach(src ${PBO_TEST_SOURCES})
     get_filename_component(name ${src} NAME_WE)
     get_filename_component(dir ${src} DIRECTORY)
     get_filename_component(kind ${dir} NAME)
     add_executable(${name} ${src})
-    target_link_libraries(${name} PRIVATE notes_core OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+    target_link_libraries(${name} PRIVATE office_core OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
     target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
     target_compile_definitions(${name} PRIVATE
-        PBNOTES_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-        PBNOTES_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        PBO_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+        PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     add_test(NAME ${name} COMMAND ${name})
     set_tests_properties(${name} PROPERTIES LABELS "${kind}" SKIP_RETURN_CODE 77)
-endforeach()
-
-# The Qt bridge tests need Qt Core; test_notes_bridge runs real local HTTPS servers like the core TLS tests.
-if(TARGET pbnotes_bridge)
-    foreach(name test_notes_bridge test_reader_blocks test_attachment_image_provider test_attachments_bridge test_file_preview_provider test_about_bridge test_edit_bridge)
-        add_executable(${name} bridge/${name}.cpp)
-        target_link_libraries(${name} PRIVATE pbnotes_bridge OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
-        target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
-        target_compile_definitions(${name} PRIVATE PBNOTES_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-        add_test(NAME ${name} COMMAND ${name})
-        set_tests_properties(${name} PROPERTIES LABELS "bridge" SKIP_RETURN_CODE 77)
-    endforeach()
-endif()
-
-# The real QML pages driven offscreen (spec 005): a driver script per scenario, the page under test and stubs for the
-# bridge objects. Needs Qt Quick on the host; skipped otherwise (and on the device build).
-if(TARGET pbnotes_bridge AND NOT TARGET_TYPE STREQUAL "ARM")
-    find_package(Qt6 QUIET COMPONENTS Qml Quick Test)
-    if(Qt6Qml_FOUND AND Qt6Quick_FOUND AND Qt6Test_FOUND)
-        set(CMAKE_AUTOMOC ON)
-        add_executable(test_qml_pages qml/test_qml_pages.cpp)
-        target_link_libraries(test_qml_pages PRIVATE pbnotes_bridge Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Test)
-        target_compile_definitions(test_qml_pages PRIVATE
-            PBNOTES_QML_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml" PBNOTES_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-        add_test(NAME qml_editor_flow COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/editor_flow.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/EditorPage.qml)
-        set_tests_properties(qml_editor_flow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_editor_slash COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/editor_slash.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/EditorPage.qml)
-        set_tests_properties(qml_editor_slash PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_reader_title COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/reader_title.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/ReaderPage.qml)
-        set_tests_properties(qml_reader_title PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_reader_select COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/reader_select.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/ReaderPage.qml)
-        set_tests_properties(qml_reader_select PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_reader_blocks COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/reader_blocks.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/ReaderPage.qml)
-        set_tests_properties(qml_reader_blocks PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_settings_sync COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/settings_sync.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/SettingsPage.qml)
-        set_tests_properties(qml_settings_sync PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_ui_style COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/ui_style.qml
-                 ${CMAKE_SOURCE_DIR}/qml/Icon.qml)
-        set_tests_properties(qml_ui_style PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_note_list COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/note_list.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/NoteListPage.qml)
-        set_tests_properties(qml_note_list PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_ui_dialogs COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/ui_dialogs.qml
-                 ${CMAKE_SOURCE_DIR}/qml/ConfirmDialog.qml)
-        set_tests_properties(qml_ui_dialogs PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_editor_bars COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/editor_bars.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/EditorPage.qml)
-        set_tests_properties(qml_editor_bars PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_reader_page COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/reader_page.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/ReaderPage.qml)
-        set_tests_properties(qml_reader_page PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_setup_page COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/setup_page.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/SetupPage.qml)
-        set_tests_properties(qml_setup_page PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_about_pages COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/about_pages.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/AboutPage.qml)
-        set_tests_properties(qml_about_pages PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
-        add_test(NAME qml_file_picker COMMAND test_qml_pages ${CMAKE_CURRENT_SOURCE_DIR}/qml/file_picker.qml
-                 ${CMAKE_SOURCE_DIR}/qml/pages/FilePickerPage.qml)
-        set_tests_properties(qml_file_picker PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "bridge")
+    if(PBO_SANITIZE)
+        # leaks inside system libraries loaded by libcurl are not ours (tests/lsan.supp)
+        set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/lsan.supp:print_suppressions=0")
     endif()
-endif()
+endforeach()
 
 # Mechanical anonymization check of the fixtures, and a self-test proving the checker works.
 add_test(NAME check_fixtures
@@ -99,10 +37,156 @@ add_test(NAME check_fixtures_selftest
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-fixtures.sh --self-test)
 add_test(NAME check_constitution COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-constitution.sh ${CMAKE_SOURCE_DIR})
 add_test(NAME check_constitution_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-constitution.sh --self-test)
-# Spec 010: no bordered text button anywhere in the QML (FR-006, SC-003), and a self-test proving the checker works.
+# No bordered text button anywhere in the QML, and a self-test proving the checker works.
 add_test(NAME check_ui_style COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-ui-style.sh ${CMAKE_SOURCE_DIR})
 add_test(NAME check_ui_style_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-ui-style.sh --self-test)
+# Every text of the QML has a German translation with the same placeholders, and the table has no stale entries (T175).
+add_test(NAME check_translations COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/extract-strings.py --check)
+set_tests_properties(check_translations PROPERTIES LABELS "script")
+add_test(NAME package_size_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/package-device.sh --self-test)
+set_tests_properties(package_size_selftest PROPERTIES LABELS "script")
 add_test(NAME check_version_bump_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-version-bump.sh --self-test)
 set_tests_properties(check_fixtures check_fixtures_selftest check_constitution check_constitution_selftest
                      PROPERTIES LABELS "script")
 add_test(NAME launcher_script COMMAND ${CMAKE_SOURCE_DIR}/tests/launcher/test_launcher.sh ${CMAKE_SOURCE_DIR})
+add_test(NAME probe_script COMMAND ${CMAKE_SOURCE_DIR}/tests/launcher/test_probe.sh ${CMAKE_SOURCE_DIR} $<TARGET_FILE:pbo-probe>)
+add_test(NAME check_fake_markers COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-fake-markers.sh ${CMAKE_SOURCE_DIR})
+add_test(NAME check_fake_markers_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-fake-markers.sh --self-test)
+set_tests_properties(check_fake_markers check_fake_markers_selftest PROPERTIES LABELS "script")
+
+# Bridge tests (Qt Core + the real core): only when the Qt layer is built.
+if(TARGET pbo_bridge)
+    find_package(Qt6 QUIET COMPONENTS Test)
+    if(Qt6Test_FOUND)
+        add_executable(test_skeleton_bridges bridge/test_skeleton_bridges.cpp)
+        target_link_libraries(test_skeleton_bridges PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_skeleton_bridges PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_skeleton_bridges COMMAND test_skeleton_bridges)
+        set_tests_properties(test_skeleton_bridges PROPERTIES LABELS "bridge" TIMEOUT 180 SKIP_RETURN_CODE 77
+                             ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_reader_bridge bridge/test_reader_bridge.cpp)
+        target_link_libraries(test_reader_bridge PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_reader_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_reader_bridge COMMAND test_reader_bridge)
+        set_tests_properties(test_reader_bridge PROPERTIES LABELS "bridge" TIMEOUT 120 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_folder_model bridge/test_folder_model.cpp)
+        target_link_libraries(test_folder_model PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_folder_model PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_folder_model COMMAND test_folder_model)
+        set_tests_properties(test_folder_model PROPERTIES LABELS "bridge" TIMEOUT 120 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_compose_bridge bridge/test_compose_bridge.cpp)
+        target_link_libraries(test_compose_bridge PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_compose_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_compose_bridge COMMAND test_compose_bridge)
+        set_tests_properties(test_compose_bridge PROPERTIES LABELS "bridge" TIMEOUT 180 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_calendar_bridges bridge/test_calendar_bridges.cpp)
+        target_link_libraries(test_calendar_bridges PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_calendar_bridges PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_calendar_bridges PRIVATE PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        add_test(NAME test_calendar_bridges COMMAND test_calendar_bridges)
+        set_tests_properties(test_calendar_bridges PROPERTIES LABELS "bridge" TIMEOUT 180 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_mail_actions_bridge bridge/test_mail_actions_bridge.cpp)
+        target_link_libraries(test_mail_actions_bridge PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_mail_actions_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_mail_actions_bridge COMMAND test_mail_actions_bridge)
+        set_tests_properties(test_mail_actions_bridge PROPERTIES LABELS "bridge" TIMEOUT 180 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_settings_bridge bridge/test_settings_bridge.cpp)
+        target_link_libraries(test_settings_bridge PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_settings_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_settings_bridge COMMAND test_settings_bridge)
+        set_tests_properties(test_settings_bridge PROPERTIES LABELS "bridge" TIMEOUT 120 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_about_bridge bridge/test_about_bridge.cpp)
+        target_link_libraries(test_about_bridge PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_about_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_about_bridge PRIVATE PBO_LICENSES_ROOT="${CMAKE_SOURCE_DIR}")
+        add_test(NAME test_about_bridge COMMAND test_about_bridge)
+        set_tests_properties(test_about_bridge PROPERTIES LABELS "bridge" TIMEOUT 120 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_table_translator bridge/test_table_translator.cpp)
+        target_link_libraries(test_table_translator PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_table_translator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_table_translator PRIVATE PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        add_test(NAME test_table_translator COMMAND test_table_translator)
+        set_tests_properties(test_table_translator PROPERTIES LABELS "bridge" TIMEOUT 60 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_calendar_text bridge/test_calendar_text.cpp)
+        target_link_libraries(test_calendar_text PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_calendar_text PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_calendar_text COMMAND test_calendar_text)
+        set_tests_properties(test_calendar_text PROPERTIES LABELS "bridge" TIMEOUT 60 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_home_status bridge/test_home_status.cpp)
+        target_link_libraries(test_home_status PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_home_status PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_home_status PRIVATE PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        add_test(NAME test_home_status COMMAND test_home_status)
+        set_tests_properties(test_home_status PROPERTIES LABELS "bridge" TIMEOUT 120 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_idle_no_network bridge/test_idle_no_network.cpp)
+        target_link_libraries(test_idle_no_network PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_idle_no_network PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_idle_no_network COMMAND test_idle_no_network)
+        set_tests_properties(test_idle_no_network PROPERTIES LABELS "bridge" TIMEOUT 180 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_auto_sync bridge/test_auto_sync.cpp)
+        target_link_libraries(test_auto_sync PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_auto_sync PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        add_test(NAME test_auto_sync COMMAND test_auto_sync)
+        set_tests_properties(test_auto_sync PROPERTIES LABELS "bridge" TIMEOUT 120 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_event_edit_bridge bridge/test_event_edit_bridge.cpp)
+        target_link_libraries(test_event_edit_bridge PRIVATE pbo_bridge Qt6::Core Qt6::Test OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_event_edit_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_event_edit_bridge PRIVATE PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        add_test(NAME test_event_edit_bridge COMMAND test_event_edit_bridge)
+        set_tests_properties(test_event_edit_bridge PROPERTIES LABELS "bridge" TIMEOUT 180 SKIP_RETURN_CODE 77 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    else()
+        message(STATUS "Qt6 Test not found - the bridge tests are not built")
+    endif()
+endif()
+
+# The QML flow test (QtQuickTest, offscreen): real pages, real bridges, fake IMAP server.
+if(TARGET pbo_bridge)
+    find_package(Qt6 QUIET COMPONENTS QuickTest Qml Quick)
+    if(Qt6QuickTest_FOUND AND Qt6Qml_FOUND AND Qt6Quick_FOUND)
+        set(CMAKE_AUTOMOC ON)
+        add_executable(test_skeleton_flow qml/tst_skeleton_flow.cpp)
+        target_link_libraries(test_skeleton_flow PRIVATE pbo_bridge Qt6::QuickTest Qt6::Qml Qt6::Quick OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_skeleton_flow PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_skeleton_flow PRIVATE
+            PBO_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+            PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+            QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml/tst_skeleton_flow.qml")
+        add_test(NAME test_skeleton_flow COMMAND test_skeleton_flow)
+        set_tests_properties(test_skeleton_flow PROPERTIES LABELS "bridge" TIMEOUT 180 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_compose_flow qml/tst_compose_flow.cpp)
+        target_link_libraries(test_compose_flow PRIVATE pbo_bridge Qt6::QuickTest Qt6::Qml Qt6::Quick OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_compose_flow PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_compose_flow PRIVATE
+            PBO_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+            PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+            QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml/tst_compose_flow.qml")
+        add_test(NAME test_compose_flow COMMAND test_compose_flow)
+        set_tests_properties(test_compose_flow PROPERTIES LABELS "bridge" TIMEOUT 180 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        add_executable(test_calendar_flow qml/tst_calendar_flow.cpp)
+        target_link_libraries(test_calendar_flow PRIVATE pbo_bridge Qt6::QuickTest Qt6::Qml Qt6::Quick OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_calendar_flow PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+        target_compile_definitions(test_calendar_flow PRIVATE
+            PBO_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+            PBO_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+            QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml/tst_calendar_flow.qml")
+        add_test(NAME test_calendar_flow COMMAND test_calendar_flow)
+        set_tests_properties(test_calendar_flow PROPERTIES LABELS "bridge" TIMEOUT 180 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    else()
+        message(STATUS "Qt6 QuickTest not found - the QML flow test is not built")
+    endif()
+endif()
+
+# Developer tool: a demo IMAP server for scripts/run-host-demo.sh and the on-device self-test (T051, T054).
+add_executable(pbo_fake_imap tools/pbo_fake_imap.cpp)
+target_link_libraries(pbo_fake_imap PRIVATE office_core OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+target_include_directories(pbo_fake_imap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+add_test(NAME imap_selftest_script COMMAND ${CMAKE_SOURCE_DIR}/tests/launcher/test_imap_selftest.sh $<TARGET_FILE:pbo-probe> $<TARGET_FILE:pbo_fake_imap>)
+set_tests_properties(imap_selftest_script PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
+
+if(PBO_SANITIZE)
+    foreach(t test_skeleton_bridges test_reader_bridge test_folder_model test_compose_bridge test_calendar_bridges test_event_edit_bridge test_mail_actions_bridge test_auto_sync test_settings_bridge test_about_bridge test_home_status test_idle_no_network test_skeleton_flow test_compose_flow test_calendar_flow probe_script imap_selftest_script)
+        if(TEST ${t})
+            set_property(TEST ${t} APPEND PROPERTY ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/lsan.supp:print_suppressions=0")
+        endif()
+    endforeach()
+endif()

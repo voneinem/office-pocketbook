@@ -1,4 +1,4 @@
-#include "pbnotes/log.h"
+#include "pbo/log.h"
 
 #include <algorithm>
 #include <cctype>
@@ -6,7 +6,7 @@
 #include <ctime>
 #include <mutex>
 
-namespace pbnotes {
+namespace pbo {
 namespace log {
 
 namespace {
@@ -14,14 +14,33 @@ namespace {
 std::mutex g_mutex;
 std::function<void(const std::string&)> g_sink;
 
+// Names that contain one of these fragments are redacted ("password", "user_name", "mail_body", ...).
+// Short ordinary words (host, folder, to, from, ...) are matched as whole words only, so "total" or "outcome" stay
+// readable while "to", "sent_to" and "event.title" are redacted.
 bool is_sensitive_name(const std::string& name) {
     std::string n = name;
     std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return std::tolower(c); });
-    static const char* const kDenied[] = {"pass", "secret", "token", "auth", "user", "content", "title",
-                                          "body", "note", "url", "mail", "cookie", "key", "name"};
-    for (const char* d : kDenied)
+    static const char* const kFragments[] = {"pass", "secret", "token", "auth", "user", "content", "title",
+                                             "body", "note", "url", "mail", "cookie", "key", "name"};
+    for (const char* d : kFragments)
         if (n.find(d) != std::string::npos) return true;
-    return false;
+    static const char* const kWords[] = {"host",      "folder",   "subject",  "from",    "to",
+                                         "recipient", "summary",  "attendee", "location"};
+    std::string word;
+    auto is_word = [&]() {
+        for (const char* w : kWords)
+            if (word == w) return true;
+        return false;
+    };
+    for (char c : n) {
+        if (std::isalnum(static_cast<unsigned char>(c))) {
+            word += c;
+        } else {
+            if (is_word()) return true;
+            word.clear();
+        }
+    }
+    return is_word();
 }
 
 std::string sanitize(std::string v) {
@@ -72,4 +91,4 @@ void reset_sink() {
 }
 
 }  // namespace log
-}  // namespace pbnotes
+}  // namespace pbo

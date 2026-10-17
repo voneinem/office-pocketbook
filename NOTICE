@@ -1,7 +1,9 @@
-Notes Pocketbook - third-party notices
+PB Office (office-pocketbook) - third-party notices
 
 This project is licensed under the MIT License (see LICENSE). The following components and
-patterns are used under their own terms.
+patterns are used under their own terms. The build setup, the Qt-free core layout, the SQLite store helpers,
+the TLS/CA handling and the generic QML widgets were taken from the author's own notes-pocketbook
+(MIT, same copyright holder).
 
 --------------------------------------------------------------------------------
 InkFeed (MIT License)
@@ -11,9 +13,8 @@ Build, launcher and packaging patterns were adapted from InkFeed: the CMake ARM 
 and manual moc/rcc steps (cmake/sdk.cmake, cmake/qt_manual.cmake), the rotation/devicePixelRatio
 stage (qml/Main.qml; the flat button of the first versions was replaced in 1.10.0 by controls written for this project),
 the InkView glue in app/, the PocketBook launcher script
-(platform/pocketbook/pbnotes.app) and the packaging script (scripts/package-device.sh). The way the
-default web browser is started from a link (OpenBook with BROWSER_FOR_AUTH, app/device_bridge.cpp)
-follows InkFeed's browser launch.
+(platform/pocketbook/pboffice.app) and the packaging script (scripts/package-device.sh). InkFeed's browser-launch
+pattern is not used: PB Office never opens links.
 
 Copyright (c) 2026 Joost Rohde
 
@@ -47,11 +48,18 @@ third_party/sqlite/sqlite3.c and sqlite3.h, the SQLite amalgamation (https://www
 SQLite is in the public domain. Version and checksums: third_party/sqlite/VERSION.
 
 --------------------------------------------------------------------------------
+IANA Time Zone Database (public domain)
+third_party/tzdata/zoneinfo/, compact TZif files built with zic from the tz release recorded in
+third_party/tzdata/VERSION (https://www.iana.org/time-zones). The time zone database is in the
+public domain. The table that maps Windows zone names (for example "W. Europe Standard Time") to
+IANA names is hand-written in core/src/tz.cpp; it is not a copy of a data file.
+
+--------------------------------------------------------------------------------
 Noto Emoji (SIL Open Font License 1.1)
 third_party/noto-emoji/NotoEmoji.ttf, the monochrome Noto Emoji font from the Google Fonts
 repository (https://github.com/google/fonts/tree/main/ofl/notoemoji). Copyright 2013 Google LLC.
 Licensed under the SIL Open Font License, Version 1.1; the license text is third_party/noto-emoji/OFL.txt
-and is installed next to the font on the reader (applications/pbnotes-emoji-OFL.txt). Source commit
+and is installed next to the font on the reader (applications/pboffice-emoji-OFL.txt). Source commit
 and checksum: third_party/noto-emoji/VERSION.
 
 --------------------------------------------------------------------------------
@@ -70,9 +78,10 @@ Copyright (C) The Qt Company Ltd. and other contributors.
 libcurl (curl license)
 https://curl.se/docs/copyright.html
 
-All network connections use libcurl, provided by the reader's system software and not redistributed
-by this project. Licensed under the curl license (MIT-style); the text is shown in the app and in
-licenses/curl.txt.
+All network connections use libcurl. The reader's own libcurl cannot read IMAP answers completely, so the
+app contains libcurl 8.18.0, built unmodified from the official source by scripts/build-curl-arm.sh (the
+source tarball is pinned by checksum and signature in that script). Licensed under the curl license
+(MIT-style); the text is shown in the app and in licenses/curl.txt.
 
 Copyright (c) Daniel Stenberg, <daniel@haxx.se>, and many contributors.
 

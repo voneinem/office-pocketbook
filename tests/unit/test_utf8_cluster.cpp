@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "pbnotes/utf8.h"
+#include "pbo/utf8.h"
 #include "test_support.h"
 
-using pbnotes::utf8_cluster_end;
+using pbo::utf8_cluster_end;
 
 namespace {
 

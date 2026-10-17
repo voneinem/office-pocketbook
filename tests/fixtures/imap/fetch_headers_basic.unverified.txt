@@ -1,0 +1,16 @@
+* 1 FETCH (UID 101 FLAGS (\Seen) INTERNALDATE "05-Oct-2026 10:00:01 +0000" RFC822.SIZE 812 BODY[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)] {160}
+From: Anna Beispiel <anna@example.org>
+To: alice@example.org
+Subject: Planung Oktober
+Date: Mon, 05 Oct 2026 10:00:00 +0000
+Message-ID: <a1@example.org>
+
+)
+* 2 FETCH (UID 102 FLAGS () INTERNALDATE "06-Oct-2026 06:30:05 +0000" RFC822.SIZE 640 BODY[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)] {166}
+From: ben@example.org
+To: alice@example.org, carol@example.org
+Subject: Re: Planung Oktober
+Date: Tue, 06 Oct 2026 08:30:00 +0200
+Message-ID: <b2@example.org>
+
+)

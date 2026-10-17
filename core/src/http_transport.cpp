@@ -1,9 +1,9 @@
-#include "pbnotes/http_transport.h"
+#include "pbo/http_transport.h"
 
 #include <algorithm>
 #include <cctype>
 
-namespace pbnotes {
+namespace pbo {
 
 namespace {
 bool iequals(const std::string& a, const std::string& b) {
@@ -20,10 +20,17 @@ std::string header_value(const Headers& headers, const std::string& name) {
     return std::string();
 }
 
+std::vector<std::string> header_values(const Headers& headers, const std::string& name) {
+    std::vector<std::string> out;
+    for (const auto& h : headers)
+        if (iequals(h.first, name)) out.push_back(h.second);
+    return out;
+}
+
 bool has_header(const Headers& headers, const std::string& name) {
     for (const auto& h : headers)
         if (iequals(h.first, name)) return true;
     return false;
 }
 
-}  // namespace pbnotes
+}  // namespace pbo

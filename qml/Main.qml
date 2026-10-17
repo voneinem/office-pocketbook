@@ -17,6 +17,7 @@ ApplicationWindow {
 
     Item {
         id: stage
+        objectName: "stage"   // where the text fields' copy-and-paste bubble is put (TextMenu)
         readonly property real dpr: Screen.devicePixelRatio
         width: win.width * dpr
         height: win.height * dpr
@@ -27,10 +28,13 @@ ApplicationWindow {
             id: nav
             anchors.fill: parent
             // initialItem with a binding silently showed nothing (measured on the desktop and the reader):
-            // push the first page explicitly. `startPage` is a desktop-only override for screenshots.
-            Component.onCompleted: push(Qt.resolvedUrl(startPage.length > 0 ? startPage
-                                          : (bridge.configured ? "pages/NoteListPage.qml" : "pages/SetupPage.qml")),
-                                        startNote > 0 ? { noteId: startNote } : {})
+            // push the first page explicitly: the start page once an account exists, else the account setup (first start).
+            Component.onCompleted: {
+                push(Qt.resolvedUrl(startupError.length > 0 ? "pages/StorageErrorPage.qml" : (account.mailConfigured || account.calendarConfigured ? "pages/HomePage.qml" : "pages/AccountSetupPage.qml")))
+                // FR-030: a sync at the start of the app when Wi-Fi is already connected (it never switches Wi-Fi on by itself;
+                // the sync button does). The list shows "Syncing …" and fills in when it is done.
+                if (startupError.length === 0) sync.startupSync(device.wifiConnected())
+            }
             // E-ink: no transitions.
             pushEnter: Transition {}
             pushExit: Transition {}
@@ -38,6 +42,16 @@ ApplicationWindow {
             popExit: Transition {}
             replaceEnter: Transition {}
             replaceExit: Transition {}
+        }
+
+        // A change the user made on the reader asks for a sync (SyncBridge.noteChange); when the reader is offline the bridge asks for Wi-Fi first
+        Connections {
+            target: typeof sync !== "undefined" ? sync : null     // there is no sync object when the storage could not be opened
+            function onConnectRequested() { device.connectNetwork() }
+        }
+        Connections {
+            target: device
+            function onNetworkResult(connected) { if (typeof sync !== "undefined") sync.connectResult(connected) }
         }
 
         Connections {
@@ -50,37 +64,6 @@ ApplicationWindow {
                     Qt.inputMethod.hide()
                     nav.pop()
                 }
-            }
-        }
-
-        // Told once after a sync that kept both versions of a note, or brought back a note that was
-        // deleted here but changed on the server (nothing is ever overwritten or deleted silently).
-        ConfirmDialog {
-            id: conflictDialog
-            title: qsTr("Notes changed in two places")
-            acceptText: qsTr("OK")
-            showCancel: false
-            Connections {
-                target: bridge
-                function onConflictsDetected(conflicts, restored) {
-                    var lines = []
-                    if (conflicts > 0)
-                        lines.push(qsTr("%n note(s) were changed on the reader and on the server. Both versions are kept: the server's version replaced the note, and your text is saved as a new note with \"(conflict ...)\" in its title.", "", conflicts))
-                    if (restored > 0)
-                        lines.push(qsTr("%n note(s) deleted here were changed on the server, so they were not deleted and are back in the list.", "", restored))
-                    conflictDialog.text = lines.join("\n\n")
-                    conflictDialog.open()
-                }
-            }
-        }
-
-        // Setting up or forgetting the account switches between the setup screen and the home page.
-        Connections {
-            target: bridge
-            function onAccountChanged() {
-                Qt.inputMethod.hide()
-                nav.clear()
-                nav.push(Qt.resolvedUrl(bridge.configured ? "pages/NoteListPage.qml" : "pages/SetupPage.qml"))
             }
         }
     }

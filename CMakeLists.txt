@@ -18,14 +18,14 @@ endif()
 
 # The release version lives in the VERSION file (single source of truth for the app and the package).
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/VERSION)
-file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/VERSION PBNOTES_FILE_VERSION LIMIT_COUNT 1)
-if(NOT PBNOTES_FILE_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+")
-    message(FATAL_ERROR "VERSION must start with MAJOR.MINOR.PATCH (got '${PBNOTES_FILE_VERSION}')")
+file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/VERSION PBO_FILE_VERSION LIMIT_COUNT 1)
+if(NOT PBO_FILE_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+")
+    message(FATAL_ERROR "VERSION must start with MAJOR.MINOR.PATCH (got '${PBO_FILE_VERSION}')")
 endif()
 
-project(pbnotes VERSION ${PBNOTES_FILE_VERSION} LANGUAGES C CXX)
+project(pboffice VERSION ${PBO_FILE_VERSION} LANGUAGES C CXX)
 
-set(PBNOTES_APP_NAME "pbnotes" CACHE STRING "Application/binary base name")
+set(PBO_APP_NAME "pboffice" CACHE STRING "Application/binary base name")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,16 +36,23 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-# Version string shown in the app: the VERSION file; override with -DPBNOTES_VERSION=...
-if(NOT PBNOTES_VERSION)
-    set(PBNOTES_VERSION "${PBNOTES_FILE_VERSION}")
+# Version string shown in the app: the VERSION file; override with -DPBO_VERSION=...
+if(NOT PBO_VERSION)
+    set(PBO_VERSION "${PBO_FILE_VERSION}")
 endif()
-message(STATUS "pbnotes version: ${PBNOTES_VERSION} (${TARGET_TYPE})")
+message(STATUS "pboffice version: ${PBO_VERSION} (${TARGET_TYPE})")
 
 add_compile_options(-Wall -Wextra)
 
-# Qt-free core library (API client, sync engine, SQLite store): builds and tests on the host
-# without Qt, InkView or the SDK (constitution Principle V).
+# Sanitizer build for the parsers and the interruption tests (Principle I, SC-010): cmake -DPBO_SANITIZE=ON
+option(PBO_SANITIZE "Build everything with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(PBO_SANITIZE)
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
+# Qt-free core library (mail, calendar, storage, sync): builds and tests on the host
+# without Qt, InkView or the SDK (constitution Principle II).
 add_subdirectory(core)
 
 # Qt layer (bridge) and the application; the manual moc/rcc helpers are only needed for the device.

@@ -1,4 +1,4 @@
-#include "pbnotes/ca_selector.h"
+#include "pbo/ca_selector.h"
 
 #include <sys/stat.h>
 
@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iterator>
 
-namespace pbnotes {
+namespace pbo {
 
 bool is_usable_ca_file(const std::string& path) {
     struct stat st;
@@ -139,4 +139,4 @@ EffectiveCa build_effective_ca(const std::string& base_ca_path, const std::strin
 
 
 
-}  // namespace pbnotes
+}  // namespace pbo

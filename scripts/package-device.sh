@@ -3,17 +3,24 @@
 # Assemble the InkPad One install bundle from a freshly built ARM binary.
 # Adapted from InkFeed's packaging script (MIT, see NOTICE).
 #
-#   scripts/package-device.sh <built-arm-elf> [version] [out-dir]
+#   scripts/package-device.sh <built-arm-elf> [version] [out-dir] [built-arm-pbo-probe]
+#   scripts/package-device.sh --check-size <zip> [limit-bytes]   fail when the zip is larger than the budget (25 MB, research R-19)
+#   scripts/package-device.sh --self-test                        prove that the size check works
 #
-# Produces <out-dir>/pbnotes-inkpad-one-<version>.zip, laid out so the user can unzip it
+# Produces <out-dir>/pboffice-inkpad-one-<version>.zip, laid out so the user can unzip it
 # straight onto the reader's ext1 partition:
 #
-#   applications/pbnotes.bin           the app (ARM ELF)
-#   applications/pbnotes.app           the launcher (shell script)
-#   applications/pbnotes-cacert.pem    bundled CA certificates (used when the device has none)
-#   applications/pbnotes-emoji.ttf     monochrome emoji font (Noto Emoji, SIL OFL 1.1)
-#   applications/pbnotes-emoji-OFL.txt the font's license text
-#   applications/pbnotes-licenses/     license texts for the About screens: licenses/manifest.txt and every
+#   applications/pboffice.bin           the app (ARM ELF)
+#   applications/pboffice.app           the launcher (shell script)
+#   applications/pbo-probe.bin          the device probe (only when the 4th argument is given)
+#   applications/pboffice-probe.sh      the probe script the launcher runs when run-probe exists (INSTALL.md)
+#   applications/pboffice-cacert.pem    bundled CA certificates (used when the device has none)
+#   applications/pboffice-zoneinfo/     IANA time zone data (compact TZif files) and its VERSION file, for the calendar
+#   applications/pboffice-plugins/imageformats/   the Qt JPEG and GIF image plugins of the SDK (pictures of mails; a copy the app falls back on when the
+#                                      reader's own Qt has none): taken from $PBO_QT_IMAGE_PLUGINS or $POCKETBOOK_SDK/local/qt6/plugins/imageformats; skipped with a note when neither exists
+#   applications/pboffice-emoji.ttf     monochrome emoji font (Noto Emoji, SIL OFL 1.1)
+#   applications/pboffice-emoji-OFL.txt the font's license text
+#   applications/pboffice-licenses/     license texts for the About screens: licenses/manifest.txt and every
 #                                      file the manifest names, at the same relative path as in the repository
 #   applications/icons/*.bmp           launcher icons
 #   INSTALL.md                         install / registration steps
@@ -23,17 +30,50 @@
 # so the zip name and the About screen cannot disagree.
 set -euo pipefail
 
+# The size budget of the package (research R-19, K4): the zip must stay small enough for a quick copy to the reader.
+MAX_ZIP_BYTES="${PBO_MAX_ZIP_BYTES:-26214400}"   # 25 MB
+
+# check_zip_size <zip> [limit]: prints the size; returns 1 and says so when it is above the limit.
+check_zip_size() {
+    local zip="$1" limit="${2:-$MAX_ZIP_BYTES}" size
+    size="$(stat -c %s "$zip")"
+    echo "package size: $size bytes (limit $limit)"
+    if [ "$size" -gt "$limit" ]; then
+        echo "the package is larger than the budget of $limit bytes: $zip" >&2
+        return 1
+    fi
+    return 0
+}
+
+if [ "${1:-}" = "--check-size" ]; then
+    check_zip_size "${2:?usage: package-device.sh --check-size <zip> [limit-bytes]}" "${3:-$MAX_ZIP_BYTES}"
+    exit $?
+fi
+
+if [ "${1:-}" = "--self-test" ]; then
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
+    head -c 1000 /dev/zero > "$tmp/small.zip"
+    head -c 3000 /dev/zero > "$tmp/big.zip"
+    check_zip_size "$tmp/small.zip" 2000 >/dev/null || { echo "self-test failed: a small package was refused" >&2; exit 1; }
+    if check_zip_size "$tmp/big.zip" 2000 >/dev/null 2>&1; then echo "self-test failed: a package over the limit was accepted" >&2; exit 1; fi
+    check_zip_size "$tmp/small.zip" 1000 >/dev/null || { echo "self-test failed: a package exactly at the limit was refused" >&2; exit 1; }
+    echo "package-device.sh self-test passed"
+    exit 0
+fi
+
 BIN="${1:?usage: package-device.sh <built-arm-elf> [version] [out-dir]}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${2:-$(head -n 1 "$ROOT/VERSION" 2>/dev/null | tr -d '[:space:]')}"
 [ -n "$VERSION" ] || { echo "no version: pass one or create $ROOT/VERSION" >&2; exit 1; }
 OUT_DIR="${3:-dist}"
+PROBE_BIN="${4:-}"
 
 for f in "$BIN" \
-         "$ROOT/platform/pocketbook/pbnotes.app" \
-         "$ROOT/third_party/cacert/cacert.pem" \
+         "$ROOT/platform/pocketbook/pboffice.app" \
+         "$ROOT/third_party/cacert/cacert.pem" "$ROOT/third_party/tzdata/VERSION" \
          "$ROOT/third_party/noto-emoji/NotoEmoji.ttf" "$ROOT/third_party/noto-emoji/OFL.txt" \
-         "$ROOT/res/icons/pbnotes.bmp" "$ROOT/res/icons/pbnotes_f.bmp" \
+         "$ROOT/res/icons/pboffice.bmp" "$ROOT/res/icons/pboffice_f.bmp" \
          "$ROOT/INSTALL.md"; do
     [ -f "$f" ] || { echo "missing input: $f" >&2; exit 1; }
 done
@@ -55,26 +95,46 @@ for t in $license_files; do
 done
 
 OUT_DIR="$(mkdir -p "$OUT_DIR" && cd "$OUT_DIR" && pwd)"
-ZIP="$OUT_DIR/pbnotes-inkpad-one-$VERSION.zip"
+ZIP="$OUT_DIR/pboffice-inkpad-one-$VERSION.zip"
 
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
 apps="$stage/applications"
 mkdir -p "$apps/icons"
 
-install -m 777 "$BIN"                                   "$apps/pbnotes.bin"
-install -m 777 "$ROOT/platform/pocketbook/pbnotes.app"  "$apps/pbnotes.app"
-install -m 644 "$ROOT/third_party/cacert/cacert.pem"    "$apps/pbnotes-cacert.pem"
-install -m 644 "$ROOT/third_party/noto-emoji/NotoEmoji.ttf" "$apps/pbnotes-emoji.ttf"
-install -m 644 "$ROOT/third_party/noto-emoji/OFL.txt"   "$apps/pbnotes-emoji-OFL.txt"
-install -D -m 644 "$MANIFEST" "$apps/pbnotes-licenses/licenses/manifest.txt"
+install -m 777 "$BIN"                                   "$apps/pboffice.bin"
+install -m 777 "$ROOT/platform/pocketbook/pboffice.app"  "$apps/pboffice.app"
+install -m 777 "$ROOT/scripts/probe-device.sh"          "$apps/pboffice-probe.sh"
+if [ -n "$PROBE_BIN" ]; then
+    [ -f "$PROBE_BIN" ] || { echo "missing input: $PROBE_BIN" >&2; exit 1; }
+    install -m 777 "$PROBE_BIN"                         "$apps/pbo-probe.bin"
+fi
+install -m 644 "$ROOT/third_party/cacert/cacert.pem"    "$apps/pboffice-cacert.pem"
+[ -d "$ROOT/third_party/tzdata/zoneinfo" ] || { echo "missing input: third_party/tzdata/zoneinfo (run scripts/update-tzdata.sh)" >&2; exit 1; }
+mkdir -p "$apps/pboffice-zoneinfo"
+cp -R "$ROOT/third_party/tzdata/zoneinfo/." "$apps/pboffice-zoneinfo/"
+install -m 644 "$ROOT/third_party/tzdata/VERSION"       "$apps/pboffice-zoneinfo/VERSION"
+find "$apps/pboffice-zoneinfo" -type d -exec chmod 755 {} + ; find "$apps/pboffice-zoneinfo" -type f -exec chmod 644 {} +
+plugin_src="${PBO_QT_IMAGE_PLUGINS:-${POCKETBOOK_SDK:+$POCKETBOOK_SDK/local/qt6/plugins/imageformats}}"
+if [ -n "$plugin_src" ] && [ -f "$plugin_src/libqjpeg.so" ]; then
+    mkdir -p "$apps/pboffice-plugins/imageformats"
+    for plugin in libqjpeg.so libqgif.so; do
+        [ -f "$plugin_src/$plugin" ] && install -m 755 "$plugin_src/$plugin" "$apps/pboffice-plugins/imageformats/$plugin"
+    done
+else
+    echo "note: no Qt image plugins found (set PBO_QT_IMAGE_PLUGINS or POCKETBOOK_SDK): the package relies on the reader's own JPEG and GIF support" >&2
+fi
+install -m 644 "$ROOT/third_party/noto-emoji/NotoEmoji.ttf" "$apps/pboffice-emoji.ttf"
+install -m 644 "$ROOT/third_party/noto-emoji/OFL.txt"   "$apps/pboffice-emoji-OFL.txt"
+install -D -m 644 "$MANIFEST" "$apps/pboffice-licenses/licenses/manifest.txt"
 for t in $license_files; do
-    install -D -m 644 "$ROOT/$t" "$apps/pbnotes-licenses/$t"
+    install -D -m 644 "$ROOT/$t" "$apps/pboffice-licenses/$t"
 done
-install -m 666 "$ROOT/res/icons/pbnotes.bmp"            "$apps/icons/pbnotes.bmp"
-install -m 666 "$ROOT/res/icons/pbnotes_f.bmp"          "$apps/icons/pbnotes_f.bmp"
+install -m 666 "$ROOT/res/icons/pboffice.bmp"            "$apps/icons/pboffice.bmp"
+install -m 666 "$ROOT/res/icons/pboffice_f.bmp"          "$apps/icons/pboffice_f.bmp"
 install -m 644 "$ROOT/INSTALL.md"                       "$stage/INSTALL.md"
 
 rm -f "$ZIP"
 ( cd "$stage" && zip -r -q "$ZIP" . )
+check_zip_size "$ZIP" >&2 || { rm -f "$ZIP"; exit 1; }
 echo "$ZIP"

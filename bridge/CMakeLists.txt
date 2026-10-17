@@ -1,31 +1,25 @@
-# Qt layer between the QML UI and notes_core. ARM: SDK Qt with manual moc. HOST: host Qt6 (Core only)
+# Qt layer between the QML UI and office_core. ARM: SDK Qt with manual moc. HOST: host Qt6 (Core only)
 # when installed; otherwise the bridge, the app and the bridge tests are simply not built.
 
-set(PBNOTES_BRIDGE_SOURCES src/notes_bridge.cpp src/reader_blocks.cpp)
-
-set(PBNOTES_BRIDGE_SOURCES ${PBNOTES_BRIDGE_SOURCES} src/attachment_image_provider.cpp src/attachments_bridge.cpp src/file_preview_provider.cpp
-    src/about_bridge.cpp src/edit_bridge.cpp)
+set(PBO_BRIDGE_SOURCES src/about_bridge.cpp src/worker.cpp src/account_bridge.cpp src/sync_bridge.cpp src/message_list_model.cpp src/reader_bridge.cpp src/attachment_bridge.cpp src/folder_model.cpp src/timezone_bridge.cpp src/agenda_model.cpp src/day_model.cpp src/month_model.cpp src/event_bridge.cpp src/compose_bridge.cpp src/outbox_model.cpp src/event_edit_bridge.cpp src/conflicts_model.cpp src/settings_bridge.cpp src/home_bridge.cpp src/table_translator.cpp src/mail_image_provider.cpp)
+set(PBO_BRIDGE_HEADERS include/about_bridge.h include/worker.h include/account_bridge.h include/sync_bridge.h include/message_list_model.h include/reader_bridge.h include/attachment_bridge.h include/folder_model.h include/timezone_bridge.h include/agenda_model.h include/day_model.h include/month_model.h include/event_bridge.h include/calendar_text.h include/compose_bridge.h include/outbox_model.h include/event_edit_bridge.h include/conflicts_model.h include/settings_bridge.h include/home_bridge.h include/table_translator.h include/mail_image_provider.h)
+# headers with Q_OBJECT (the device build runs moc by hand on these)
+set(PBO_BRIDGE_MOC_HEADERS include/about_bridge.h include/account_bridge.h include/sync_bridge.h include/message_list_model.h include/reader_bridge.h include/attachment_bridge.h include/folder_model.h include/timezone_bridge.h include/agenda_model.h include/day_model.h include/month_model.h include/event_bridge.h include/compose_bridge.h include/outbox_model.h include/event_edit_bridge.h include/conflicts_model.h include/settings_bridge.h include/home_bridge.h)
 
 if(TARGET_TYPE STREQUAL "ARM")
-    pbnotes_moc(PBNOTES_BRIDGE_MOC ${CMAKE_CURRENT_SOURCE_DIR}/include/notes_bridge.h
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/include/attachment_image_provider.h
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/include/attachments_bridge.h
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/include/file_preview_provider.h
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/include/about_bridge.h
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/include/edit_bridge.h)
-    add_library(pbnotes_bridge STATIC ${PBNOTES_BRIDGE_SOURCES} ${PBNOTES_BRIDGE_MOC})
-    target_include_directories(pbnotes_bridge PUBLIC include)
-    target_include_directories(pbnotes_bridge SYSTEM PUBLIC ${PBNOTES_QT_INCLUDES})
-    target_compile_definitions(pbnotes_bridge PUBLIC PLATFORM_POCKETBOOK)
-    target_link_libraries(pbnotes_bridge PUBLIC notes_core ${PBNOTES_QT_LIBS})
+    pbo_moc(PBO_BRIDGE_MOC ${PBO_BRIDGE_MOC_HEADERS})
+    add_library(pbo_bridge STATIC ${PBO_BRIDGE_SOURCES} ${PBO_BRIDGE_MOC})
+    target_include_directories(pbo_bridge PUBLIC include)
+    target_include_directories(pbo_bridge SYSTEM PUBLIC ${PBO_QT_INCLUDES})
+    target_compile_definitions(pbo_bridge PUBLIC PLATFORM_POCKETBOOK)
+    target_link_libraries(pbo_bridge PUBLIC office_core ${PBO_QT_LIBS})
 else()
     find_package(Qt6 QUIET COMPONENTS Core Gui Quick)
     if(Qt6Core_FOUND AND Qt6Gui_FOUND AND Qt6Quick_FOUND)
         set(CMAKE_AUTOMOC ON)
-        add_library(pbnotes_bridge STATIC ${PBNOTES_BRIDGE_SOURCES} include/notes_bridge.h include/attachment_image_provider.h
-                include/attachments_bridge.h include/file_preview_provider.h include/about_bridge.h include/edit_bridge.h)
-        target_include_directories(pbnotes_bridge PUBLIC include)
-        target_link_libraries(pbnotes_bridge PUBLIC notes_core Qt6::Core Qt6::Gui Qt6::Quick)
+        add_library(pbo_bridge STATIC ${PBO_BRIDGE_SOURCES} ${PBO_BRIDGE_HEADERS})
+        target_include_directories(pbo_bridge PUBLIC include)
+        target_link_libraries(pbo_bridge PUBLIC office_core Qt6::Core Qt6::Gui Qt6::Quick)
     else()
         message(STATUS "Qt6 Core/Gui/Quick not found - the Qt bridge, the app and the bridge tests are not built")
     endif()
