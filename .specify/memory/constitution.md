@@ -154,6 +154,24 @@ responses carry the `.unverified` marker.
 Rationale: protocol quirks differ per server; claiming verified behavior that was only simulated
 misleads the next reader.
 
+### X. English Documentation
+All documentation and developer-facing text MUST be written in English: Markdown files (README,
+specs, plans, research, tasks, checklists, CHANGELOG, `docs/`), code comments, identifiers, test
+names, commit messages, pull request texts, log and error keys, script output and CI messages.
+The English text of a user-visible string is its source text (the `qsTr` argument).
+
+Other languages are allowed only for:
+- application localization files (for example `qml/strings_de.tsv`) and the translated texts they
+  hold;
+- test data and expected values that exercise non-English input or locale behavior (for example
+  German umlauts, character sets, German folder names such as `Entwürfe`, German output of a
+  localized function), kept as data and explained by an English comment or test name;
+- verbatim names and quotations that are not translatable (server folder names, product names).
+
+Rationale: one documentation language keeps the code base readable for every contributor and
+reviewer, while localization files and non-English test data are the product's purpose, not its
+documentation.
+
 ## Security & Data Handling Constraints
 
 - Data on a source device or server MUST NOT be deleted or overwritten without explicit user
@@ -187,7 +205,7 @@ misleads the next reader.
 
 - Every change goes through review; the reviewer MUST verify compliance with this constitution and
   MUST reject TLS-verification bypasses, plaintext fallbacks, hard-coded SDK paths, remote-content
-  loading and code copied from GPL projects.
+  loading, code copied from GPL projects and documentation outside English (Principle X).
 - Branches follow the gitflow convention in `.specify/branch-convention.yml`
   (`feature/NNN-name`); bugs are triaged with the bug extension (`.specify/bugs/<slug>/`).
 - Test gates: all tests pass and no new secrets are detected before merge (Principle VIII).
@@ -215,4 +233,4 @@ Compliance is reviewed in every pull request and in a mandatory Constitution Che
 which lists each principle with pass, justified deviation or not applicable. Unjustified violations
 block the merge.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-13 | **Last Amended**: 2026-10-16
+**Version**: 1.2.0 | **Ratified**: 2026-10-13 | **Last Amended**: 2026-10-17
