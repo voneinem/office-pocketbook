@@ -203,7 +203,23 @@ private:
         last_blank_ = false;
     }
 
+    // A line of nothing but the separators of empty table cells (layout tables are full of them) says nothing and is dropped; a bar that is
+    // text of the mail is not a separator and stays (the characters are counted against the separators that were put in).
+    bool only_cell_separators() const {
+        if (separators_ == 0) return false;
+        long bars = 0;
+        for (size_t i = 0; i < cur_.size(); ++i) {
+            if (cur_[i] == '|') ++bars;
+            else if (cur_[i] == ' ') continue;
+            else if (cur_[i] == '\xC2' && i + 1 < cur_.size() && cur_[i + 1] == '\xA0') ++i;   // a no-break space fills many empty cells
+            else return false;
+        }
+        return bars == separators_;
+    }
+
     void finish_line() {
+        if (!cur_.empty() && only_cell_separators()) cur_.clear();
+        separators_ = 0;
         if (cur_.empty()) {
             marker_.clear();
             return;
@@ -353,7 +369,7 @@ private:
         if (n == "tr") { finish_line(); if (!t.closing) cells_ = 0; return; }
         if (n == "td" || n == "th") {
             if (!t.closing) {
-                if (cells_++ > 0) { cur_ += " | "; pending_space_ = false; }
+                if (cells_++ > 0) { cur_ += " | "; ++separators_; pending_space_ = false; }
             }
             return;
         }
@@ -453,7 +469,7 @@ private:
     std::vector<HtmlImage>* images_;
     std::string out_, cur_, marker_;
     bool pending_space_ = false, last_blank_ = false, in_pre_ = false, in_item_ = false;
-    int bq_ = 0, bq_over_ = 0, list_depth_ = 0, cells_ = 0, link_ = 0;
+    int bq_ = 0, bq_over_ = 0, list_depth_ = 0, cells_ = 0, link_ = 0, separators_ = 0;   // separators_: the " | " of the cells put into cur_ so far
     std::vector<ListState> lists_;
 };
 

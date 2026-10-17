@@ -199,6 +199,22 @@ PB_TEST(picture_markers_become_picture_blocks_between_the_text_blocks) {
     PB_CHECK_EQ(r.remotePending(), 1);                                           // "Load images" is offered for the one on the sender's server
 }
 
+PB_TEST(lines_of_only_bars_from_empty_table_cells_are_not_shown_but_text_with_bars_is) {
+    Env env;
+    pbo::BodyUpdate u;   // a text stored by an earlier version holds such lines
+    u.text = "first\n\n |\n\n | | \n\nsecond | third\n\n|\n\nlast";
+    PB_CHECK(env.store->apply_body(env.id, u).ok());
+    ReaderBridge::Config cfg;
+    cfg.store = env.store.get();
+    ReaderBridge r(cfg);
+    r.open(env.id);
+    const QVariantList b = r.blocks();
+    PB_CHECK_EQ(b.size(), 3);
+    PB_CHECK_EQ(b.at(0).toMap().value("text").toString().toStdString(), std::string("first"));
+    PB_CHECK_EQ(b.at(1).toMap().value("text").toString().toStdString(), std::string("second | third"));
+    PB_CHECK_EQ(b.at(2).toMap().value("text").toString().toStdString(), std::string("last"));
+}
+
 PB_TEST(a_marker_without_a_picture_row_and_a_marker_inside_a_line_are_plain_text_or_nothing) {
     Env env;
     pbo::BodyUpdate u;

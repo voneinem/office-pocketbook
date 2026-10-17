@@ -154,7 +154,8 @@ void ReaderBridge::open(qlonglong messageId) {
             int start = 0;
             const int level = quote_level(line, &start);
             QString text = line.mid(start);
-            if (text.trimmed().isEmpty()) { flush(); continue; }
+            // lines of nothing but bars are the separators of empty table cells (texts stored by an earlier version hold them): not shown
+            if (text.trimmed().isEmpty() || QStringView(text).trimmed().toString().remove(QLatin1Char('|')).trimmed().isEmpty()) { flush(); continue; }
             if (const int n = picture_marker(text.trimmed()); n > 0) {
                 flush();
                 for (const pbo::StoredImage& im : images) {

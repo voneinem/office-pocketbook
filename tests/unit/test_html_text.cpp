@@ -37,6 +37,17 @@ PB_TEST(tables_become_rows_with_bars) {
     PB_CHECK_EQ(text_of("<p>before</p><table><tr><td>x</td></tr></table><p>after</p>"), std::string("before\n\nx\n\nafter"));
 }
 
+PB_TEST(rows_of_empty_cells_leave_no_lines_of_bars_but_a_bar_the_sender_wrote_stays) {
+    // layout tables are full of empty cells: their separators carry nothing and are not shown
+    PB_CHECK_EQ(text_of("<p>a</p><table><tr><td></td><td></td><td></td></tr></table><p>b</p>"), std::string("a\n\nb"));
+    PB_CHECK_EQ(text_of("<table><tr><td>x</td></tr><tr><td> </td><td>&nbsp;</td></tr><tr><td>y</td></tr></table>"), std::string("x\ny"));
+    // a cell with text keeps its separators, also when the first cell is empty
+    PB_CHECK_EQ(text_of("<table><tr><td></td><td>b</td></tr></table>"), std::string(" | b"));
+    PB_CHECK_EQ(text_of("<table><tr><td>a</td><td></td></tr></table>"), std::string("a |"));
+    // a bar that is text of the mail is text
+    PB_CHECK_EQ(text_of("<p>a</p><p>|</p><p>b</p>"), std::string("a\n\n|\n\nb"));
+}
+
 PB_TEST(blockquotes_get_quote_markers) {
     PB_CHECK_EQ(text_of("<p>Hi</p><blockquote>quoted</blockquote><p>bye</p>"), std::string("Hi\n\n> quoted\n\nbye"));
     PB_CHECK_EQ(text_of("<blockquote>outer<blockquote>inner</blockquote></blockquote>"), std::string("> outer\n>\n>> inner"));
