@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:malformed-0001
+FN:Ends with backslash\
+NOTE:\
+ORG:\;\
+N:\\\;\n\N
+END:VCARD

@@ -1,6 +1,7 @@
 // T167/T173: the sync keeps the store below the storage limit: after the pull the oldest mail outside the window is removed, mail with local work is
 // not, and a limit that cannot be met by removing old mail is reported. UNVERIFIED against real servers (fake server).
 #include "mail_env.h"
+#include "pbo/vcard.h"
 
 PBO_FAKE_SERVER_TEST();
 
@@ -40,6 +41,36 @@ PB_TEST(a_comfortable_limit_removes_nothing) {
     PB_CHECK_EQ(report.evicted, 0);
     PB_CHECK(!report.storage_over);
     PB_CHECK_EQ(e.q("SELECT count(*) FROM message"), std::string("5"));
+}
+
+PB_TEST(eviction_never_selects_a_contact_and_never_touches_one_with_local_work) {
+    MailEnv e;
+    for (int i = 0; i < 40; ++i) e.add("INBOX", {}, 100 + i, true);
+    e.store->debug_exec("UPDATE account_mail SET sync_days = 365");
+    PB_CHECK(e.sync().outcome == pbo::SyncOutcome::Success);
+    pbo::AddressBook b;
+    b.href = "/dav/ab/contacts/";
+    b.name = "Contacts";
+    b.writable = true;
+    const auto book = e.store->upsert_addressbook(b);
+    PB_CHECK(book.ok());
+    pbo::ContactPullBatch batch;
+    for (int i = 0; i < 5; ++i) {
+        const std::string uid = "u" + std::to_string(i);
+        batch.upserts.push_back(pbo::contact_upsert_from_card("/dav/ab/contacts/" + uid + ".vcf", "\"e\"",
+                                                              "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:" + uid + "\r\nFN:Person " + uid + "\r\nN:" + uid + ";Person;;;\r\nEND:VCARD\r\n"));
+    }
+    PB_CHECK(e.store->apply_contact_pull(book.value, batch).ok());
+    PB_CHECK(e.store->debug_exec("UPDATE contact SET sync_state = 'pending_update' WHERE uid = 'u0'").empty());
+    PB_CHECK(e.store->debug_exec("UPDATE contact SET sync_state = 'pending_delete', undo_state = 'synced' WHERE uid = 'u1'").empty());
+    const std::string before = e.q("SELECT group_concat(uid || sync_state || vcf, '|') FROM contact ORDER BY uid");
+    e.store->debug_exec("UPDATE account_mail SET sync_days = 30");
+    PB_CHECK(e.store->set_setting("window_days_applied", "30").ok());
+    e.storage_limit_override = 1000;   // far below what is stored: everything that may go, goes
+    const auto report = e.sync();
+    PB_CHECK(report.evicted > 0);
+    PB_CHECK_EQ(e.q("SELECT count(*) FROM contact"), std::string("5"));
+    PB_CHECK_EQ(e.q("SELECT group_concat(uid || sync_state || vcf, '|') FROM contact ORDER BY uid"), before);
 }
 
 PB_TEST_MAIN()

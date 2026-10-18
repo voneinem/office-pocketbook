@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:4.0
+UID:urn:uuid:7a1c3f10-0000-4000-8000-000000000004
+FN:Lena Köhler
+N:Köhler;Lena;;;
+NICKNAME:Lenchen
+EMAIL;PREF=1:lena@example.org
+TEL;VALUE=uri;TYPE=cell:tel:+1-555-0130
+ADR;TYPE=work:;;4 Example Square;Exampletown;;22222;Exampleland
+NOTE:Umlaute: ä ö ü ß
+X-CUSTOM-FIELD:keep me
+END:VCARD

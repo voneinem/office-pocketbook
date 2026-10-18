@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000108
+FN:Hal Theta
+N:Theta;Hal;;;
+item1.ADR;type=HOME;type=pref:;;8 Example Alley;Exampletown;;55555;Examplel
+ and
+item1.X-ABADR:xx
+item1.X-ABLabel:_$!<Home>!$_
+END:VCARD

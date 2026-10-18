@@ -8,6 +8,7 @@
 #include "compose_bridge.h"
 #include "outbox_model.h"
 #include "pbo/store.h"
+#include "pbo/vcard.h"
 #include "test_support.h"
 #include "tmp_dir.h"
 
@@ -307,6 +308,57 @@ PB_TEST(the_outbox_model_describes_every_state_and_offers_only_the_right_actions
     PB_CHECK(e.store->finish_sending(ids[2], {pbo::SendFinish::Kind::Uncertain, "timeout", ""}).ok());
     PB_CHECK(m.markSent(ids[2]));
     PB_CHECK_EQ(m.rows().at(1).toMap()["stateKey"].toString().toStdString(), std::string("copy"));
+}
+
+PB_TEST(suggestions_carry_the_label_and_whether_they_come_from_a_contact) {
+    Env e;
+    pbo::AddressBook b;
+    b.href = "/dav/ab/contacts/";
+    b.name = "Contacts";
+    b.writable = true;
+    const auto book = e.store->upsert_addressbook(b);
+    PB_CHECK(book.ok());
+    pbo::ContactPullBatch batch;
+    batch.upserts.push_back(pbo::contact_upsert_from_card("/dav/ab/contacts/a.vcf", "\"e\"",
+                                                          "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:u-a\r\nFN:Anna Berg\r\nN:Berg;Anna;;;\r\nEMAIL;TYPE=WORK:anna@example.org\r\nEMAIL;TYPE=HOME:anna@home.example.org\r\nEND:VCARD\r\n"));
+    PB_CHECK(e.store->apply_contact_pull(book.value, batch).ok());
+    PB_CHECK(e.store->note_address("andreas@example.org", "Andreas", 2).ok());
+    ComposeBridge c(e.config());
+    const QVariantList rows = c.suggestions(QStringLiteral("an"));
+    PB_CHECK_EQ(rows.size(), 3);
+    const QVariantMap work = rows[0].toMap(), home = rows[1].toMap(), mail = rows[2].toMap();
+    PB_CHECK(work["fromContact"].toBool());
+    PB_CHECK_EQ(work["label"].toString().toStdString(), std::string("work"));
+    PB_CHECK_EQ(work["display"].toString().toStdString(), std::string("Anna Berg <anna@example.org> (work)"));
+    PB_CHECK_EQ(work["text"].toString().toStdString(), std::string("Anna Berg <anna@example.org>"));   // what is put into the field: no label
+    PB_CHECK_EQ(home["display"].toString().toStdString(), std::string("Anna Berg <anna@home.example.org> (home)"));
+    PB_CHECK(!mail["fromContact"].toBool());
+    PB_CHECK_EQ(mail["display"].toString().toStdString(), std::string("Andreas <andreas@example.org>"));   // as before
+    PB_CHECK_EQ(mail["text"].toString().toStdString(), mail["display"].toString().toStdString());
+    // the string list of earlier versions gives the same insert texts
+    const QStringList plain = c.suggest(QStringLiteral("an"));
+    PB_CHECK_EQ(plain.size(), 3);
+    PB_CHECK_EQ(plain[0].toStdString(), std::string("Anna Berg <anna@example.org>"));
+}
+
+PB_TEST(picking_a_contact_suggestion_adds_the_recipient_without_the_label_and_changes_nothing_else) {
+    Env e;
+    pbo::AddressBook b;
+    b.href = "/dav/ab/contacts/";
+    b.name = "Contacts";
+    b.writable = true;
+    const auto book = e.store->upsert_addressbook(b);
+    pbo::ContactPullBatch batch;
+    batch.upserts.push_back(pbo::contact_upsert_from_card("/dav/ab/contacts/a.vcf", "\"e\"",
+                                                          "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:u-a\r\nFN:Anna Berg\r\nN:Berg;Anna;;;\r\nEMAIL;TYPE=WORK:anna@example.org\r\nEND:VCARD\r\n"));
+    PB_CHECK(e.store->apply_contact_pull(book.value, batch).ok());
+    ComposeBridge c(e.config());
+    const QVariantList rows = c.suggestions(QStringLiteral("x@example.org, an"));
+    PB_CHECK_EQ(rows.size(), 1);
+    PB_CHECK_EQ(c.applySuggestion(QStringLiteral("x@example.org, an"), rows[0].toMap()["text"].toString()).toStdString(), std::string("x@example.org, Anna Berg <anna@example.org>, "));
+    PB_CHECK_EQ(e.store->debug_query("SELECT count(*) FROM outbox"), std::string("0"));
+    PB_CHECK_EQ(e.store->debug_query("SELECT sync_state FROM contact"), std::string("synced"));   // nothing was sent or changed
+    PB_CHECK_EQ(c.suggestions(QStringLiteral("anna@example.org, an")).size(), 0);                // already in the field
 }
 
 PB_TEST_MAIN()

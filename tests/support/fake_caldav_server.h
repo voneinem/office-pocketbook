@@ -140,6 +140,10 @@ public:
         before_write_ = std::move(hook);
     }
 
+    // The answer to one raw HTTP request (what the TLS front end would send). Used by the fake CardDAV server, which can stand in front of this
+    // one so that calendars and address books answer on the same address, as on a real server.
+    std::string serve(const std::string& raw) { return handle(raw); }
+
     // ---- observation ------------------------------------------------------------------------------------------------------------
     std::vector<Logged> log() {
         std::lock_guard<std::recursive_mutex> l(mu_);

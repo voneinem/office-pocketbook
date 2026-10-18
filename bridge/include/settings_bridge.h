@@ -20,6 +20,9 @@ class SettingsBridge : public QObject {
     Q_PROPERTY(bool sentByServer READ sentByServer WRITE setSentByServer NOTIFY changed)
     // "" or the name of the field the last refused value belonged to: sync_days | attachment_limit | storage_limit | no_account | write_failed
     Q_PROPERTY(QString errorKey READ errorKey NOTIFY changed)
+    // The address books of the calendar server account: [{id, name, shown, writable}] in the order of their names. Hiding one only stops showing and
+    // downloading it; nothing is deleted (FR-025).
+    Q_PROPERTY(QVariantList addressBooks READ addressBooks NOTIFY changed)
     Q_PROPERTY(QVariantList specialFolderList READ specialFolders NOTIFY changed)
     Q_PROPERTY(QVariantList syncDaysChoices READ syncDaysChoices CONSTANT)
     Q_PROPERTY(QVariantList attachmentLimitChoices READ attachmentLimitChoices CONSTANT)
@@ -68,6 +71,8 @@ public:
     Q_INVOKABLE QVariantList folderChoices() const;   // every folder of the account: [{id, name}]
     // folderId 0 = automatic. Errors (errorKey): bad_role, bad_folder, no_account
     Q_INVOKABLE bool setSpecialFolder(const QString& role, qlonglong folderId);
+    QVariantList addressBooks() const;
+    Q_INVOKABLE bool setAddressBookShown(qlonglong id, bool shown);   // false (errorKey not_found) for an unknown book
     Q_INVOKABLE void refresh();
 
 signals:

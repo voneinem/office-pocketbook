@@ -23,7 +23,7 @@ cleanup() { [ -n "$server_pid" ] && kill "$server_pid" 2>/dev/null || true; rm -
 trap cleanup EXIT
 
 mkdir -p "$tmp/data"
-"$SERVER" --ca-out "$tmp/data/custom-ca.pem" > "$tmp/server.out" 2> "$tmp/server.err" &
+"$SERVER" --ca-out "$tmp/data/custom-ca.pem" --contacts 120 > "$tmp/server.out" 2> "$tmp/server.err" &
 server_pid=$!
 for _ in $(seq 1 50); do
     grep -q '^host=' "$tmp/server.out" 2>/dev/null && break
@@ -37,5 +37,10 @@ echo "Demo mail server (fake, for trying the app only):"
 echo "  $info"
 echo "In the account form use: server = localhost, the port above, encryption = TLS, the user name and password above,"
 echo "any address such as alice@example.org. Outgoing server = localhost with the smtp port above (the connection test tries both servers)."
+dav="$(grep '^dav=' "$tmp/server.out" || true)"
+if [ -n "$dav" ]; then
+    echo "Demo calendar and contact server (fake): $dav"
+    echo "  In the calendar account form use the address after dav= with the same user name and password; the Contacts page then lists 120 demo contacts."
+fi
 echo
 PBO_DATA_DIR="$tmp/data" "$APP"

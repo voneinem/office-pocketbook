@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "pbo/calendar_sync.h"
+#include "pbo/contacts_sync.h"
 #include "pbo/credentials_file.h"
 #include "pbo/draft_mirror.h"
 #include "pbo/outbox.h"
@@ -38,12 +39,13 @@ struct SyncDeps {
 enum class SyncOutcome { Success, Partial, Failed, Offline, Cancelled };
 
 struct SyncProgress {
-    std::string step;   // "outbox", "mail_push", "mail_pull", "calendar_push", "calendar_pull", "finish"
+    std::string step;   // "outbox", "mail_push", "mail_pull", "calendar_push", "calendar_pull", "contacts_push", "contacts_pull", "finish"
 };
 
 struct SyncOptions {
     bool mail = true;
     bool calendar = true;
+    bool contacts = true;
     int64_t storage_limit_override = 0;   // bytes; 0 = the account's limit (a seam for tests: the account's limit cannot be below 20 MiB)
     bool push = true;       // false: only pull (what the user changed on the reader is left where it is)
     std::function<void(const SyncProgress&)> progress;
@@ -61,6 +63,8 @@ struct SyncReport {
     MailCounts counts;
     CalendarCounts calendar_counts;
     PushCounts push_counts;
+    ContactsCounts contacts_counts;
+    ContactsPushCounts contacts_push_counts;
     OutboxCounts outbox_counts;
     DraftMirrorCounts mirror_counts;
     MessagePushCounts message_push_counts;
@@ -68,7 +72,7 @@ struct SyncReport {
     bool storage_over = false;  // above the limit although everything that may go has gone: the protected mail alone is too big
     bool needs_zone = false;    // the calendar step waits for the user's choice of the time zone (not a problem)
     Error first_problem;
-    std::string problem_area;   // "", "mail", "calendar", "outbox"
+    std::string problem_area;   // "", "mail", "calendar", "outbox", "contacts"
 };
 
 // The step names in execution order.

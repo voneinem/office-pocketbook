@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000105
+FN:Ed Epsilon
+N:Epsilon;Ed;;;
+EMAIL:ed@example.org
+BDAY:1975-06-30
+URL:https://www.example.org/ed
+CATEGORIES:family,sports
+TITLE:Coach
+END:VCARD

@@ -31,6 +31,7 @@
         <file>ModelPager.qml</file>
         <file>SyncStatusLine.qml</file>
         <file>EventRow.qml</file>
+        <file>ContactRow.qml</file>
         <file>pages/FoldersPage.qml</file>
         <file>pages/ComposePage.qml</file>
         <file>pages/OutboxPage.qml</file>
@@ -39,6 +40,9 @@
         <file>pages/HomePage.qml</file>
         <file>pages/DraftsPage.qml</file>
         <file>pages/AgendaPage.qml</file>
+        <file>pages/ContactsPage.qml</file>
+        <file>pages/ContactPage.qml</file>
+        <file>pages/ContactEditPage.qml</file>
         <file>pages/DayPage.qml</file>
         <file>pages/MonthPage.qml</file>
         <file>pages/EventPage.qml</file>

@@ -16,6 +16,7 @@
 
 #include "pbo/account.h"
 #include "pbo/calendar_types.h"
+#include "pbo/contact_types.h"
 #include "pbo/draft_types.h"
 #include "pbo/imap_parse.h"
 #include "pbo/mail_types.h"
@@ -31,14 +32,17 @@ struct Migration {
     std::string sql;   // run inside the migration transaction
 };
 
+// The upgrade steps this build knows (store_migrations.cpp): {1, 2} since spec 002.
+const std::vector<Migration>& builtin_migrations();
+
 struct StoreOptions {
     int target_version = 0;                 // 0 = the version of this build (Store::kSchemaVersion)
-    std::vector<Migration> extra_migrations;  // the registered upgrade steps (tests add their own)
+    std::vector<Migration> extra_migrations;  // steps after the built-in ones (tests add their own)
 };
 
 class Store {
 public:
-    static constexpr int kSchemaVersion = 1;
+    static constexpr int kSchemaVersion = 2;   // 2: address books and contacts (spec 002)
 
     // Creates `dir` (mode 0700) and `dir/attachments` (0700) if needed and opens `dir/pboffice.db` (0600).
     // Errors: "schema_too_new" (the file is left untouched), "migration_failed" (rolled back, backup kept),
@@ -136,9 +140,14 @@ public:
     // Full-text search over sender, recipients, subject and the stored body text of every folder (research R-17). The input is taken literally: quotes,
     // % _ * and FTS syntax characters are ordinary characters; every word matches as a prefix; all words must match. Newest first.
     std::vector<MessageHeader> search(const std::string& query, int limit) const;
-    // Addresses seen in cached and sent mail, for the recipient fields: those that start with `prefix` (address or name), most used first.
+    // Addresses for the recipient fields. First the addresses of the contacts of the shown address books (a contact that waits for its deletion is left
+    // out): those where the typed text starts the address or any word of the contact's name or organization (folded: umlauts and case do not matter),
+    // one entry per address, in the order of the contacts' names; then the addresses seen in cached and sent mail that start with `prefix` (address or
+    // name), most used first, without the ones a contact already gave (compared in lower case). At most `limit` entries.
     struct AddressSuggestion {
         std::string addr, name;
+        std::string label;           // the label of the contact's address ("work", "home", ...); "" for mail
+        bool from_contact = false;
     };
     std::vector<AddressSuggestion> address_suggestions(const std::string& prefix, int limit) const;
     Error note_address(const std::string& addr, const std::string& name, int weight = 1);
@@ -250,6 +259,75 @@ public:
     Error keep_both_events(int64_t event_id, const EventUpsert& server, const EventUpsert& mine_copy);
     Error recreate_event(int64_t event_id);   // server_deleted -> pending_create
     Error discard_event(int64_t event_id);    // server_deleted -> row removed (the user confirmed)
+
+    // ---- contacts (specs/002-server-contacts/data-model.md: addressbook, contact, contact_email, contact_conflict) ----
+    // The address books in the order of their names.
+    std::vector<AddressBook> addressbooks() const;
+    // Inserts the book or refreshes name and writability of the one with this href; the user's choice (shown) and the cursor stay. A new book is shown.
+    Result<int64_t> upsert_addressbook(const AddressBook& book);
+    Error set_addressbook_shown(int64_t addressbook_id, bool shown);   // "not_found" for an unknown book; nothing is deleted
+    // Books that are not in `present_hrefs` are marked present_on_server = 0; one without any contact with local work is removed with its contacts.
+    Error mark_addressbooks_present(const std::set<std::string>& present_hrefs);
+    std::vector<StoredContactRef> contact_refs(int64_t addressbook_id) const;
+    // Cards, removals and the cursor of the book in ONE transaction. A contact with local work (sync_state not 'synced') is never overwritten by a
+    // pulled card (conflict handling is part of the push/resolve code); a pulled card whose href is already stored replaces that row; a card whose
+    // uid is taken by another card of the book is stored unreadable under the uid "href:<href>". The cursor columns are written only when set in the
+    // batch (a run that fetched less than the cursor covers leaves them alone).
+    Error apply_contact_pull(int64_t addressbook_id, const ContactPullBatch& batch);
+    // The contacts of the shown address books (not those waiting for deletion) sorted by name, one page. `query`: every word must occur in the name,
+    // organization, email addresses or phone numbers (a word of digits matches a phone number whatever its spaces and dashes); "" = all.
+    std::vector<ContactListItem> contacts_page(const std::string& query, int offset, int limit) const;
+    int contacts_count(const std::string& query) const;
+    std::optional<ContactView> contact(int64_t contact_id) const;
+
+    // ---- contacts the user made on the reader (the push sends them; specs/002-server-contacts/data-model.md: state machine) ----
+    // Writes a new (contact_id 0, in addressbook_id) contact in ONE transaction: 'pending_create', the path and UID of `record` (chosen by the caller, the
+    // path before the first request), no ETag, partial = the record's. Errors: "not_found" (no such book, or it is gone), "read_only", "duplicate_uid",
+    // "write_failed". Returns the contact id. For an existing contact (contact_id != 0) `record` holds the edited text and the derived columns (href, etag, uid
+    // and partial of the record are ignored): a synced one becomes 'pending_update', a pending one stays pending, a 'server_deleted' one stays marked;
+    // the failure mark goes. Errors: "not_found", "read_only" (the book does not accept changes), "in_conflict", "delete_pending", "unreadable".
+    Result<int64_t> save_contact_local(int64_t addressbook_id, int64_t contact_id, const ContactUpsert& record);
+    // Contacts with work the server has not seen yet, in the order they were made.
+    std::vector<PendingContact> pending_contacts() const;
+    int pending_contact_count() const;   // contacts with a change waiting for the server (also failed ones), of every address book
+    // The server holds `pushed_vcf` under `href` with `etag` (empty when the server named none). If the contact was not edited meanwhile it becomes
+    // 'synced'; if it was, it stays waiting as 'pending_update' against the new ETag. The failure mark goes.
+    Error contact_pushed(int64_t contact_id, const std::string& pushed_vcf, const std::string& href, const std::string& etag);
+    // The server did not take the contact: error_key = "read_only" | "too_large" | "refused" | "storage_full_server"; the contact stays as it is.
+    Error contact_refused(int64_t contact_id, const std::string& error_key);
+    Error clear_contact_error(int64_t contact_id);   // "not_found"
+    // The user gives up a waiting change: a new contact is removed, a changed one is downloaded again by the next pull. "not_found", "not_failed".
+    Error discard_contact_change(int64_t contact_id);
+
+    // ---- deleting (FR-019) ----
+    // The user deleted the contact (already confirmed). 'pending_create' / 'server_deleted': the row is removed (the server never had it, or no longer has it);
+    // 'synced' / 'pending_update': 'pending_delete' with undo_state = the state before (the text stays for an undo); already 'pending_delete': nothing changes.
+    // Errors: "not_found", "read_only" (the address book does not accept changes), "in_conflict".
+    Error request_contact_delete(int64_t contact_id);
+    // Until the server confirmed it: back to the state before the deletion. "not_found", "nothing_to_undo".
+    Error undo_contact_delete(int64_t contact_id);
+    // The deletions waiting for the server, newest first, at most `limit`.
+    std::vector<ContactListItem> deleted_contacts(int limit) const;
+
+    // ---- conflicts and contacts the server removed (data-model.md: state machine) ----
+    // 412 or a differing ETag: the server's version (heavy properties removed) is kept beside the local one and the state becomes 'conflict'. For a
+    // 'pending_delete' row the user's side is the deletion (ContactProblem::deleting). "not_found", "bad_state" (no change waits).
+    Error contact_conflicted(int64_t contact_id, const std::string& server_vcf, const std::string& server_etag, const std::string& href);
+    // 404 on an update or the book is gone: 'pending_update' / 'conflict' becomes 'server_deleted' (the user's version stays); a 'pending_delete' row is removed.
+    Error contact_gone_on_server(int64_t contact_id);
+    // DELETE accepted or the card was already gone: a 'pending_delete' row is removed.
+    Error contact_removed_on_server(int64_t contact_id);
+    std::vector<ContactProblem> contact_problems() const;   // 'conflict' and 'server_deleted' rows, in the order of their ids
+    // Resolutions of a conflict (each in ONE transaction; "not_found", "not_in_conflict"). KeepMine: the local text goes up again against the server's ETag (a
+    // deletion stays a deletion). KeepServer: the row becomes the server's version (`server`). KeepBoth: the row becomes the server's version and the local text
+    // is kept as a new contact (`mine_copy`: new UID, new path, 'pending_create'; with a deletion on the user's side there is no copy).
+    Error keep_my_contact(int64_t contact_id);
+    Error keep_server_contact(int64_t contact_id, const ContactUpsert& server);
+    Error keep_both_contacts(int64_t contact_id, const ContactUpsert& server, const ContactUpsert& mine_copy);
+    // 'server_deleted' -> 'pending_create' under the fresh path `new_href` (no ETag). "not_found", "not_server_deleted", "book_gone", "read_only".
+    Error recreate_contact(int64_t contact_id, const std::string& new_href);
+    // 'server_deleted' -> row removed (the user confirmed). "not_found", "not_server_deleted".
+    Error discard_contact(int64_t contact_id);
 
     // ---- storage (SC-013, FR-032) ----
     struct Usage {

@@ -48,6 +48,7 @@ QString SyncBridge::lastSyncText() const {
 }
 
 QString SyncBridge::problemKey() const { return QString::fromStdString(config_.store->sync_state().problem_key); }
+QString SyncBridge::problemArea() const { return QString::fromStdString(config_.store->sync_state().problem_area); }
 
 bool SyncBridge::storageFull() const {
     const auto account = config_.store->mail_account();
@@ -73,6 +74,8 @@ void SyncBridge::cancel() { cancel_.flag = true; }
 
 bool SyncBridge::somethingWaiting() const {
     if (!config_.store->pending_messages().empty() || !config_.store->pending_events().empty()) return true;
+    for (const pbo::PendingContact& c : config_.store->pending_contacts())
+        if (c.error_key.empty()) return true;   // (a change the server refused waits for the user, not for the next automatic sync)
     for (const pbo::OutboxItem& o : config_.store->outbox())
         if (o.state == "queued" || o.state == "sent_copy_pending") return true;
     return false;

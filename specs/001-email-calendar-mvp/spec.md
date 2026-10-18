@@ -440,7 +440,7 @@ respects it.
 
 Multiple accounts; push notification of new mail, live updates or any background sync; rendering of HTML
 mail with formatting or images; rich-text composing; encrypted or signed mail; an address book (apart from
-suggesting addresses from cached mail); answering meeting invitations; shared calendars; tasks;
+suggesting addresses from cached mail; server contacts are specified in `specs/002-server-contacts/spec.md`); answering meeting invitations; shared calendars; tasks;
 timed reminders and alarms; widgets; dark mode; non-password sign-in methods for the mail and calendar accounts;
 changing repeating events (single occurrences or whole series).
 

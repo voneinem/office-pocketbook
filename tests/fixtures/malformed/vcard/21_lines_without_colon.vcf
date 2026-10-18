@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:malformed-0001
+FN Missing Colon
+TEL +1 555 0305
+JUST TEXT
+:no name
+;;;
+END:VCARD

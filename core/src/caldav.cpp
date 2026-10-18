@@ -14,32 +14,22 @@ namespace pbo {
 
 namespace {
 
-const char* kDav = "DAV:";
-const char* kCal = "urn:ietf:params:xml:ns:caldav";
-const char* kCs = "http://calendarserver.org/ns/";
+const char* kDav = dav::kNsDav;
+const char* kCal = dav::kNsCal;
+const char* kCs = dav::kNsCs;
+const char* kXmlHeader = dav::kXmlHeader;
 
 constexpr size_t kMultigetBatch = 30;
 constexpr long long kMultigetCap = 4ll << 20;
 
-std::string escape(const std::string& s) {
-    std::string o;
-    for (char c : s) {
-        if (c == '&') o += "&amp;";
-        else if (c == '<') o += "&lt;";
-        else if (c == '>') o += "&gt;";
-        else if (c == '"') o += "&quot;";
-        else o += c;
-    }
-    return o;
-}
-
-std::string trim(std::string s) {
-    size_t b = 0;
-    while (b < s.size() && std::isspace(static_cast<unsigned char>(s[b]))) ++b;
-    size_t e = s.size();
-    while (e > b && std::isspace(static_cast<unsigned char>(s[e - 1]))) --e;
-    return s.substr(b, e - b);
-}
+using dav::dav_headers;
+using dav::escape;
+using dav::ok_prop_set;
+using dav::parse_multistatus;
+using dav::path_of;
+using dav::prop_in_ok_propstat;
+using dav::status_code;
+using dav::trim;
 
 std::string utc_stamp(int64_t epoch) {
     const LocalDateTime t = civil::from_naive_epoch(epoch);
@@ -48,129 +38,23 @@ std::string utc_stamp(int64_t epoch) {
     return b;
 }
 
-bool status_ok(const std::string& status_line) {
-    // "HTTP/1.1 200 OK"
-    const size_t sp = status_line.find(' ');
-    if (sp == std::string::npos) return false;
-    return std::atoi(status_line.c_str() + sp + 1) / 100 == 2;
-}
-
-int status_code(const std::string& status_line) {
-    const size_t sp = status_line.find(' ');
-    return sp == std::string::npos ? 0 : std::atoi(status_line.c_str() + sp + 1);
-}
-
-// the prop element of the first propstat with a 2xx status that holds `ns:name`; nullptr if none
-const XmlNode* prop_in_ok_propstat(const XmlNode& response, const char* ns, const char* name) {
-    for (const XmlNode* ps : response.children_named(kDav, "propstat")) {
-        const XmlNode* st = ps->child(kDav, "status");
-        if (st && !status_ok(trim(st->text))) continue;
-        const XmlNode* prop = ps->child(kDav, "prop");
-        if (!prop) continue;
-        if (const XmlNode* p = prop->child(ns, name)) return p;
-    }
-    return nullptr;
-}
-
-const XmlNode* ok_prop_set(const XmlNode& response) {
-    for (const XmlNode* ps : response.children_named(kDav, "propstat")) {
-        const XmlNode* st = ps->child(kDav, "status");
-        if (st && !status_ok(trim(st->text))) continue;
-        if (const XmlNode* prop = ps->child(kDav, "prop")) return prop;
-    }
-    return nullptr;
-}
-
-std::string path_of(const std::string& origin, const std::string& href) {
-    if (href.compare(0, origin.size(), origin) == 0) return href.substr(origin.size());
-    return href;
-}
-
 }  // namespace
 
 CalDavClient::CalDavClient(HttpTransport& http, std::string base_url, std::string username, std::string password)
-    : http_(http), base_url_(std::move(base_url)), user_(std::move(username)), password_(std::move(password)) {
-    const size_t sep = base_url_.find("://");
-    if (sep != std::string::npos) {
-        const size_t slash = base_url_.find('/', sep + 3);
-        origin_ = base_url_.substr(0, slash);
-    }
-}
-
-std::string CalDavClient::url_for(const std::string& href) const {
-    if (href.empty() || origin_.empty()) return std::string();
-    if (href.compare(0, 2, "//") == 0) return std::string();   // a scheme-relative address names another host
-    if (href[0] == '/') return origin_ + href;
-    if (href.compare(0, origin_.size(), origin_) == 0 && (href.size() == origin_.size() || href[origin_.size()] == '/')) return href;
-    if (href.find("://") != std::string::npos) return std::string();   // another host
-    return origin_ + "/" + href;
-}
-
-Response CalDavClient::send(const std::string& method, const std::string& url, const std::string& body, const Headers& headers, long long cap) {
-    Request r;
-    r.method = method;
-    r.url = url;
-    r.body = body;
-    r.headers = headers;
-    r.username = user_;
-    r.password = password_;
-    r.max_response_bytes = cap;
-    Response answer = http_.perform(r);
-    if (answer.status != 0) {
-        const std::string date = header_value(answer.headers, "Date");
-        if (!date.empty())
-            if (const auto t = parse_http_date(date)) server_time_ = *t;
-    }
-    return answer;
-}
-
-Error CalDavClient::status_error(const Response& r, bool* handled) const {
-    if (handled) *handled = true;
-    if (r.body_too_large) return make_error(ErrorClass::Protocol, "too_large", "the answer is larger than the limit");
-    if (r.status == 0) {
-        const ErrorClass cls = r.error == ErrorClass::None ? ErrorClass::Network : r.error;
-        return make_error(cls, r.error_key.empty() ? "server_unreachable" : r.error_key, r.error_detail);
-    }
-    if (r.status == 401) return make_error(ErrorClass::Auth, "auth_failed", "the server refused the login");
-    if (r.status == 403) return make_error(ErrorClass::Server, "forbidden", "the server refused the request");
-    if (r.status == 404) return make_error(ErrorClass::Server, "not_found", "not found on the server");
-    if (r.status >= 500 || r.status == 429 || r.status == 408) return make_error(ErrorClass::Server, "server_error", "the server reported a problem");
-    if (r.status >= 200 && r.status < 300) {
-        if (handled) *handled = false;
-        return Error();
-    }
-    return make_error(ErrorClass::Protocol, "protocol_error", "unexpected answer from the server");
-}
-
-namespace {
-
-const char* kXmlHeader = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-
-Headers dav_headers(const char* depth) { return {{"Depth", depth}, {"Content-Type", "application/xml; charset=utf-8"}}; }
-
-Result<XmlNode> parse_multistatus(const Response& r) {
-    Result<XmlNode> x = parse_xml(r.body);
-    if (!x.ok()) return x;
-    if (x.value.name != "multistatus" || x.value.ns != kDav) {
-        x.error = make_error(ErrorClass::Protocol, "malformed_xml", "not a multistatus answer");
-    }
-    return x;
-}
-
-}  // namespace
+    : dav_(http, std::move(base_url), std::move(username), std::move(password)) {}
 
 Result<std::vector<CalendarInfo>> CalDavClient::discover() {
     Result<std::vector<CalendarInfo>> out;
-    if (origin_.empty()) {
+    if (dav_.origin().empty()) {
         out.error = make_error(ErrorClass::Protocol, "invalid_input", "no server address");
         return out;
     }
     // 1. the principal; candidates: the address as entered, and the well-known address (first when the address is a bare server)
     std::vector<std::string> starts;
-    const std::string well_known = origin_ + "/.well-known/caldav";
-    const bool bare = base_url_.size() <= origin_.size() + 1;
-    if (bare) starts = {well_known, base_url_};
-    else starts = {base_url_, well_known};
+    const std::string well_known = dav_.origin() + "/.well-known/caldav";
+    const bool bare = dav_.base_url().size() <= dav_.origin().size() + 1;
+    if (bare) starts = {well_known, dav_.base_url()};
+    else starts = {dav_.base_url(), well_known};
 
     std::string principal, home;
     Error first_error;
@@ -202,7 +86,7 @@ Result<std::vector<CalendarInfo>> CalDavClient::discover() {
     }
     if (principal.empty()) {
         // the address may itself be the calendar home: its listing is tried below, and an error is reported if it holds no calendar
-        home = base_url_;
+        home = dav_.base_url();
         out.error = Error();
     }
 
@@ -253,13 +137,13 @@ Result<std::vector<CalendarInfo>> CalDavClient::discover() {
         out.error = x.error;
         return out;
     }
-    const std::string home_path = path_of(origin_, home);
+    const std::string home_path = path_of(dav_.origin(), home);
     for (const XmlNode* resp : x.value.children_named(kDav, "response")) {
         const XmlNode* href_node = resp->child(kDav, "href");
         if (!href_node) continue;
         const std::string url = url_for(trim(href_node->text));
         if (url.empty()) continue;   // another host: ignored
-        const std::string path = path_of(origin_, url);
+        const std::string path = path_of(dav_.origin(), url);
         if (path == home_path) continue;
         const XmlNode* rt = prop_in_ok_propstat(*resp, kDav, "resourcetype");
         if (!rt || !rt->child(kCal, "calendar")) continue;
@@ -329,9 +213,9 @@ Result<ChangeSet> CalDavClient::changes(const CalendarInfo& cal, const std::stri
     }
     auto to_path = [this](const std::string& href) {
         const std::string url = url_for(href);
-        return url.empty() ? std::string() : path_of(origin_, url);
+        return url.empty() ? std::string() : path_of(dav_.origin(), url);
     };
-    const std::string cal_path = path_of(origin_, cal_url);
+    const std::string cal_path = path_of(dav_.origin(), cal_url);
 
     out.value.new_ctag = cal.ctag;
     if (cal.supports_sync_report) {
@@ -423,7 +307,7 @@ Result<FetchResult> CalDavClient::fetch(const CalendarInfo& cal, const std::vect
     std::vector<std::string> paths;
     for (const std::string& h : hrefs) {
         const std::string url = url_for(h);
-        if (!url.empty()) paths.push_back(path_of(origin_, url));   // a resource on another host is not asked for
+        if (!url.empty()) paths.push_back(path_of(dav_.origin(), url));   // a resource on another host is not asked for
     }
 
     // a stack: the first batch is on top
@@ -465,7 +349,7 @@ Result<FetchResult> CalDavClient::fetch(const CalendarInfo& cal, const std::vect
             if (!href_node) continue;
             const std::string url = url_for(trim(href_node->text));
             if (url.empty()) continue;
-            const std::string path = path_of(origin_, url);
+            const std::string path = path_of(dav_.origin(), url);
             const XmlNode* st = resp->child(kDav, "status");
             if (st) {
                 const int code = status_code(trim(st->text));

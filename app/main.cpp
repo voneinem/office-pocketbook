@@ -35,6 +35,8 @@
 #include "table_translator.h"
 #include "home_bridge.h"
 #include "conflicts_model.h"
+#include "contact_bridge.h"
+#include "contacts_model.h"
 #include "month_model.h"
 #include "timezone_bridge.h"
 #include "device_bridge.h"
@@ -137,6 +139,8 @@ int main(int argc, char** argv) {
     std::unique_ptr<EventBridge> eventBridge;
     std::unique_ptr<EventEditBridge> eventEditBridge;
     std::unique_ptr<ConflictsModel> conflictsModel;
+    std::unique_ptr<ContactsModel> contactsModel;
+    std::unique_ptr<ContactBridge> contactBridge;
     std::unique_ptr<SettingsBridge> settingsBridge;
     std::unique_ptr<HomeBridge> homeBridge;
     std::unique_ptr<TimeZoneBridge> timezoneBridge;
@@ -237,6 +241,14 @@ int main(int argc, char** argv) {
         cfc.clock = &clock;
         cfc.random = &random;
         conflictsModel = std::make_unique<ConflictsModel>(cfc);
+        ContactsModel::Config ctc;
+        ctc.store = store.get();
+        contactsModel = std::make_unique<ContactsModel>(ctc);
+        ContactBridge::Config cbc;
+        cbc.store = store.get();
+        cbc.clock = &clock;
+        cbc.random = &random;
+        contactBridge = std::make_unique<ContactBridge>(cbc);
         SettingsBridge::Config stc;
         stc.store = store.get();
         stc.custom_ca_status = QString::fromLatin1(custom_ca_status);
@@ -329,6 +341,8 @@ int main(int argc, char** argv) {
         engine.rootContext()->setContextProperty(QStringLiteral("eventView"), eventBridge.get());
         engine.rootContext()->setContextProperty(QStringLiteral("eventEdit"), eventEditBridge.get());
         engine.rootContext()->setContextProperty(QStringLiteral("conflicts"), conflictsModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("contacts"), contactsModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("contact"), contactBridge.get());
         engine.rootContext()->setContextProperty(QStringLiteral("settings"), settingsBridge.get());
         engine.rootContext()->setContextProperty(QStringLiteral("home"), homeBridge.get());
         engine.rootContext()->setContextProperty(QStringLiteral("timezone"), timezoneBridge.get());

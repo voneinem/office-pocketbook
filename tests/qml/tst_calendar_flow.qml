@@ -407,4 +407,19 @@ TestCase {
         compare(findChild(again, "calendarPassword").text, "")   // the password is never shown again
         again.destroy()
     }
+    function test_the_settings_page_lists_the_address_books_with_a_switch_that_hides_a_book() {
+        harness.exec("INSERT INTO addressbook(href, name, writable) VALUES('/ab/family/', 'Family', 1), ('/ab/company/', 'Company', 0)")
+        settings.refresh()
+        var p = page("SettingsPage.qml")
+        verify(findChild(p, "settingsBooksHead").visible)
+        compare(findChild(p, "settingsBook0").checked, true)
+        compare(findChild(p, "settingsBook1").checked, true)
+        findChild(p, "settingsBook0").toggled(false)
+        compare(harness.query("SELECT shown FROM addressbook WHERE name = 'Company'"), "0")
+        compare(harness.query("SELECT shown FROM addressbook WHERE name = 'Family'"), "1")
+        findChild(p, "settingsBook0").toggled(true)
+        compare(harness.query("SELECT shown FROM addressbook WHERE name = 'Company'"), "1")
+        harness.exec("DELETE FROM addressbook")
+        p.destroy()
+    }
 }

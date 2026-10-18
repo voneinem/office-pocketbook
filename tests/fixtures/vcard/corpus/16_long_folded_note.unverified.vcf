@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000116
+FN:Nina Nu
+N:Nu;Nina;;;
+NOTE:This is a long note line number 0 that must be folded. This is a long 
+ note line number 1 that must be folded. This is a long note line number 2 
+ that must be folded. This is a long note line number 3 that must be folded
+ . This is a long note line number 4 that must be folded. This is a long no
+ te line number 5 that must be folded. This is a long note line number 6 th
+ at must be folded. This is a long note line number 7 that must be folded. 
+ This is a long note line number 8 that must be folded. This is a long note
+  line number 9 that must be folded. This is a long note line number 10 tha
+ t must be folded. This is a long note line number 11 that must be folded.
+END:VCARD

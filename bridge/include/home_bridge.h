@@ -17,6 +17,10 @@ class HomeBridge : public QObject {
     Q_PROPERTY(int unreadCount READ unreadCount NOTIFY changed)
     Q_PROPERTY(bool mailConfigured READ mailConfigured NOTIFY changed)
     Q_PROPERTY(bool calendarConfigured READ calendarConfigured NOTIFY changed)
+    // A calendar SERVER account exists, so the Contacts page can say what it found (a feed has no contacts)
+    Q_PROPERTY(bool contactsAvailable READ contactsAvailable NOTIFY changed)
+    // How many contact changes wait for the server (shown beside the Contacts button)
+    Q_PROPERTY(int contactsPending READ contactsPending NOTIFY changed)
     Q_PROPERTY(QVariantList events READ events NOTIFY changed)
     Q_PROPERTY(int moreCount READ moreCount NOTIFY changed)
     Q_PROPERTY(bool needsZone READ needsZone NOTIFY changed)
@@ -34,6 +38,8 @@ public:
     int unreadCount() const { return unread_; }
     bool mailConfigured() const { return mail_; }
     bool calendarConfigured() const { return calendar_; }
+    bool contactsAvailable() const { return contacts_; }
+    int contactsPending() const { return contactsPending_; }
     QVariantList events() const { return events_; }
     int moreCount() const { return more_; }
     bool needsZone() const { return needsZone_; }
@@ -46,6 +52,7 @@ signals:
 private:
     Config config_;
     int unread_ = 0, more_ = 0;
-    bool mail_ = false, calendar_ = false, needsZone_ = false;
+    int contactsPending_ = 0;
+    bool mail_ = false, calendar_ = false, contacts_ = false, needsZone_ = false;
     QVariantList events_;
 };

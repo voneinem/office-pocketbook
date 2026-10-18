@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "pbo/dav_common.h"
 #include "pbo/http_transport.h"
 #include "pbo/types.h"
 
@@ -66,20 +67,20 @@ public:
     Result<FetchResult> fetch(const CalendarInfo& cal, const std::vector<std::string>& hrefs);
 
     // The time the server reported (HTTP Date header) with its latest answer; used to notice a wrong clock on the reader (clock_check.h)
-    std::optional<int64_t> last_server_time() const { return server_time_; }
+    std::optional<int64_t> last_server_time() const { return dav_.last_server_time(); }
 
     // Conditional writes (Principle III): if_match null = create (If-None-Match: *), else If-Match: <etag>
     WriteResult put(const std::string& href, const std::string& ics, const std::string* if_match);
     WriteResult remove(const std::string& href, const std::string& if_match);
 
 private:
-    Response send(const std::string& method, const std::string& path_or_url, const std::string& body, const Headers& headers, long long cap = 8ll << 20);
-    std::string url_for(const std::string& href) const;   // "" if the href names another host
-    Error status_error(const Response& r, bool* handled = nullptr) const;
+    Response send(const std::string& method, const std::string& path_or_url, const std::string& body, const Headers& headers, long long cap = 8ll << 20) {
+        return dav_.send(method, path_or_url, body, headers, cap);
+    }
+    std::string url_for(const std::string& href) const { return dav_.url_for(href); }   // "" if the href names another host
+    Error status_error(const Response& r, bool* handled = nullptr) const { return dav_.status_error(r, handled); }
 
-    HttpTransport& http_;
-    std::optional<int64_t> server_time_;
-    std::string base_url_, origin_, user_, password_;
+    DavSession dav_;
 };
 
 struct FeedResult {

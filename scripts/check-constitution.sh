@@ -21,7 +21,7 @@
 #        CURLUSESSL_ALL, and the literal schemes imap:// and smtp:// (no TLS) appear in core/, bridge/ and
 #        app/ only in core/src/curl_session.cpp (tests/ may use them for the fake servers).
 #   R8 No log::text / log::count key that is, starts with or ends with the word host, folder, subject, from,
-#        to, recipient, title, summary, attendee or location in core/, bridge/ and app/ (no mail or
+#        to, recipient, title, summary, attendee, location, contact, phone, email, book, org or note in core/, bridge/ and app/ (no mail or
 #        calendar content or server names in logs).
 #   R9 The identifier pbnotes (the application this one was started from) appears in no tracked file except
 #        under docs/reference/, in NOTICE and under licenses/ (the planning documents in specs/ and .specify/
@@ -125,7 +125,7 @@ scan() {
                     report R7 "$f" "$p" '(imap|smtp)://' && bad=1
                 fi
                 # R8: log keys that would carry mail or calendar content or server names
-                report R8 "$f" "$p" 'log::(text|count)[[:space:]]*\([[:space:]]*"([A-Za-z0-9.]+_)?(host|folder|subject|from|to|recipient|title|summary|attendee|location)(_[A-Za-z0-9_.]+)?"' && bad=1
+                report R8 "$f" "$p" 'log::(text|count)[[:space:]]*\([[:space:]]*"([A-Za-z0-9.]+_)?(host|folder|subject|from|to|recipient|title|summary|attendee|location|contact|phone|email|book|org|note)(_[A-Za-z0-9_.]+)?"' && bad=1
                 ;;
         esac
         case "$f" in
@@ -204,10 +204,15 @@ if [ "${1:-}" = "--self-test" ]; then
     for w in host folder subject from to recipient title summary attendee location; do
         violate core/src/a.cpp "log::text(\"$w\", v);" "R8: log key $w"
     done
+    for w in contact phone email book org note; do   # spec 002 FR-027: no contact data in logs
+        violate core/src/a.cpp "log::text(\"$w\", v);" "R8: log key $w"
+    done
+    violate core/src/a.cpp 'log::count("contact_name_len", 1);' "R8: log key contact_name_len"
+    violate bridge/a.cpp 'log::text("primary_email", v);' "R8: log key primary_email"
     violate bridge/a.cpp 'log::text("sender_from", v);' "R8: log key sender_from"
     violate app/a.cpp 'log::count("folder_name_len", 1);' "R8: log key folder_name_len"
-    printf 'log::text("result", r); log::count("pulled", 3); log::text("tofu", x);\n' > "$tmp/core/src/log_ok.cpp"
-    expect pass "R8: other keys (also tofu) are allowed"; rm "$tmp/core/src/log_ok.cpp"
+    printf 'log::text("result", r); log::count("pulled", 3); log::text("tofu", x); log::count("books", 2); log::count("contacts", 5); log::count("notes_total", 1);\n' > "$tmp/core/src/log_ok.cpp"
+    expect pass "R8: other keys (also tofu, books, contacts as counts) are allowed"; rm "$tmp/core/src/log_ok.cpp"
     # R9: the old application's identifier stays out of this one
     violate docs/a.md 'see pbnotes for the idea' "R9: pbnotes in docs"
     violate core/src/a.cpp 'namespace pbnotes {}' "R9: pbnotes in code"

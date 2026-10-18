@@ -1,6 +1,8 @@
 #pragma once
 // Schema 1, copied verbatim from specs/001-email-calendar-mvp/data-model.md (every constraint included).
 // Change the data model first, then this file; test_store_open checks the constraints.
+// Schema 2 (address books and contacts, spec 002) is the built-in migration 1 -> 2 in store_migrations.cpp: a fresh database is
+// created as schema 1 and then migrated, so there is one path to test (test_store_migration_2).
 
 namespace pbo {
 

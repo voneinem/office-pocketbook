@@ -49,6 +49,11 @@ ApplicationWindow {
             target: typeof sync !== "undefined" ? sync : null     // there is no sync object when the storage could not be opened
             function onConnectRequested() { device.connectNetwork() }
         }
+        // ... also a change to a contact (create, change, delete, retry ...): here and not on the page, which may be gone when the signal arrives
+        Connections {
+            target: typeof contact !== "undefined" ? contact : null
+            function onLocalChange() { if (typeof sync !== "undefined") sync.noteChange(device.wifiConnected()) }
+        }
         Connections {
             target: device
             function onNetworkResult(connected) { if (typeof sync !== "undefined") sync.connectResult(connected) }

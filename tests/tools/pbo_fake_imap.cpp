@@ -2,13 +2,15 @@
 // TLS with a throw-away certificate authority, so the app can be tried without any real account (quickstart.md
 // section 3) and so `pbo-probe --imap-selftest` can run from the reader against the development machine.
 //
-//   pbo_fake_imap --ca-out <file> [--port N] [--listen ADDR] [--host NAME] [--messages N]
+//   pbo_fake_imap --ca-out <file> [--port N] [--listen ADDR] [--host NAME] [--messages N] [--contacts N]
 //
 //   --ca-out    where the throw-away CA certificate is written (give it to the app as custom-ca.pem)
 //   --port      fixed port (default: a free one)
 //   --listen    bind address, default 127.0.0.1; 0.0.0.0 serves other devices on the LAN (still TLS)
 //   --host      the server name in the certificate, default localhost; the name or address the client connects to
 //   --messages  number of demo messages in INBOX (default 40)
+//   --contacts  also serve a demo calendar server with address books on one more port (spec 002): N fictional contacts in the book "Contacts" and
+//               a few in the read-only book "Company"; a second line "dav=<url> user=... password=..." names the address for the calendar account
 //
 // It prints one line "host=... port=... user=... password=... smtp=<port of the fake outgoing server>" and runs until it is stopped. UNVERIFIED against real
 // servers: it proves the app against this harness, not against a provider (constitution Principle IX).
@@ -23,6 +25,7 @@
 #include <string>
 #include <thread>
 
+#include "fake_carddav_server.h"
 #include "fake_imap_server.h"
 #include "fake_smtp_server.h"
 #include "test_support.h"
@@ -54,7 +57,7 @@ const char* kSubjects[] = {"Planung Oktober", "Re: Planung Oktober", "Einladung 
 
 int main(int argc, char** argv) {
     std::string ca_out, listen = "127.0.0.1", host = "localhost";
-    int port = 0, count = 40;
+    int port = 0, count = 40, contacts = 0;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         auto next = [&](std::string* out) {
@@ -70,8 +73,9 @@ int main(int argc, char** argv) {
         else if (a == "--host") next(&host);
         else if (a == "--port") { next(&v); port = std::atoi(v.c_str()); }
         else if (a == "--messages") { next(&v); count = std::atoi(v.c_str()); }
+        else if (a == "--contacts") { next(&v); contacts = std::atoi(v.c_str()); }
         else {
-            std::fprintf(stderr, "usage: pbo_fake_imap --ca-out FILE [--port N] [--listen ADDR] [--host NAME] [--messages N]\n");
+            std::fprintf(stderr, "usage: pbo_fake_imap --ca-out FILE [--port N] [--listen ADDR] [--host NAME] [--messages N] [--contacts N]\n");
             return 2;
         }
     }
@@ -137,9 +141,51 @@ int main(int argc, char** argv) {
         server.add_message("INBOX", raw, flags, when);
     }
 
+    // the demo calendar server with address books (fictional people only)
+    std::unique_ptr<pbtest::FakeCalDavServer> demo_cal;
+    std::unique_ptr<pbtest::FakeCardDavServer> demo_dav;
+    if (contacts > 0) {
+        pbtest::FakeCalDavServer::Config ccfg;
+        ccfg.cert = leaf.cert;
+        ccfg.key = leaf.key;
+        demo_cal = std::make_unique<pbtest::FakeCalDavServer>(ccfg);
+        pbtest::FakeCalDavServer::CalendarOptions work;
+        work.name = "Work";
+        demo_cal->add_calendar("work", work);
+        pbtest::FakeCardDavServer::Config dcfg;
+        dcfg.cert = leaf.cert;
+        dcfg.key = leaf.key;
+        demo_dav = std::make_unique<pbtest::FakeCardDavServer>(dcfg);
+        demo_dav->set_calendar_peer(demo_cal.get());
+        pbtest::FakeCardDavServer::BookOptions main;
+        main.name = "Contacts";
+        demo_dav->add_book("contacts", main);
+        pbtest::FakeCardDavServer::BookOptions company;
+        company.name = "Company";
+        company.writable = false;
+        demo_dav->add_book("company", company);
+        static const char* kGiven[] = {"Anna", "Ben", "Carla", "Dieter", "Erika", "Frank", "Gerda", "Hans", "Ida", "Jonas"};
+        static const char* kFamily[] = {"Beispiel", "Muster", "Probe", "Test", "Demo", "Schulze", "Köhler", "Größe", "Ünal", "Meier"};
+        for (int i = 0; i < contacts; ++i) {
+            const std::string g = kGiven[i % 10], f = std::string(kFamily[(i / 10 + i) % 10]) + (i >= 100 ? std::to_string(i) : "");
+            std::string card = "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:demo-contact-" + std::to_string(i) + "\r\nFN:" + g + " " + f + "\r\nN:" + f + ";" + g + ";;;\r\n";
+            if (i % 2 == 0) card += "TEL;TYPE=CELL:+49 170 555 " + std::to_string(1000 + i) + "\r\n";
+            if (i % 3 == 0) card += "TEL;TYPE=WORK:+49 30 555 " + std::to_string(2000 + i) + "\r\n";
+            if (i % 2 == 1) card += "EMAIL;TYPE=HOME:" + g + "." + std::to_string(i) + "@example.org\r\n";
+            if (i % 5 == 0) card += "ORG:Beispiel GmbH\r\nADR;TYPE=WORK:;;" + std::to_string(i + 1) + " Example Street;Exampletown;;12345;Exampleland\r\n";
+            if (i % 7 == 0) card += "NOTE:Demo note for contact " + std::to_string(i) + ".\r\n";
+            card += "END:VCARD\r\n";
+            demo_dav->put_card("contacts", "demo" + std::to_string(i) + ".vcf", card);
+        }
+        for (int i = 0; i < 3; ++i)
+            demo_dav->put_card("company", "shared" + std::to_string(i) + ".vcf",
+                               "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:demo-company-" + std::to_string(i) + "\r\nFN:Shared Person " + std::to_string(i) + "\r\nORG:Example Company\r\nEND:VCARD\r\n");
+    }
+
     ::signal(SIGINT, on_signal);
     ::signal(SIGTERM, on_signal);
     std::printf("host=%s port=%d user=%s password=%s smtp=%d\n", host.c_str(), server.port(), cfg.user.c_str(), cfg.password.c_str(), smtp.port());
+    if (demo_dav) std::printf("dav=%s user=%s password=%s\n", demo_dav->origin().c_str(), "alice", "pw-for-tests");
     std::fflush(stdout);
     while (!g_stop) std::this_thread::sleep_for(std::chrono::milliseconds(100));
     return 0;

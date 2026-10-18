@@ -68,6 +68,17 @@ The build with `pull_folder` (window only, deletions, flag changes, UIDVALIDITY 
 
 The account form's Test button (`test_mail_connection`) ran on the InkPad One against the owner's real account: log line `connection.tested imap=ok smtp=ok`, then the account was saved and a sync finished with `success`. So the SMTP test (connect, TLS, `EHLO localhost`, AUTH, `NOOP`, no mail) works against this one provider. Other providers and sending are unverified. Observation: the sync at app start (before the Test) ended `offline` / `server_unreachable` once, so "Wi-Fi connected" at start did not yet mean the server was reachable.
 
+### 2026-10-18 - contacts (0.3.0) on the reader, first owner test
+
+PB Office 0.3.0 was installed over 0.2.0 on the InkPad One (Nextcloud account with three address books). The log shows: the first start migrated the database (`pboffice.db.bak` written at launch, the app started and synced with `outcome=success`), `contacts.pull books=3 changed=160`, one contact deleted (`contacts.push ... deleted=1`), one created (`contacts.push created=1`), each followed by a sync a few seconds after the change (Wi-Fi was brought up by the app). The new contact is in the reader's database with the server's ETag, in the writable book "Kontakte", with a complete card (name, organisation, two phone numbers, email, note), and the pull after the push found nothing new. The owner reported: create, change and delete work, and "everything else is good", plus four points:
+
+| Point | Finding | Action |
+|-------|---------|--------|
+| The delete icon was a minus in a circle | Other screens use the trash can | Contact delete and the "remove entry" buttons of the form now use the trash icon |
+| The on-screen keyboard covers the text field when creating or changing a note | Three rounds on the reader (screenshots by the owner). The form scrolled against the full page and ignored the keyboard; then the keyboard height from Qt (`kb.y=840`, `kb.h=495` of a 1335 px window) was used in window pixels while the page is drawn on a stage scaled by the device pixel ratio (1.30 here), so the form moved about 30 % too little | The form ends with room for the keyboard (40 % of the page), and while a text field has the focus the field (the cursor line of the note) is moved above the keyboard; the overlap is converted by the pixel ratio and 60 px are added for the keyboard's top edge. **Owner-verified 2026-10-18: "viel besser"**, the note and its cursor line stay above the keyboard. |
+| The created contact did not appear in the owner's other mail clients | The reader's data showed a confirmed write (ETag, complete card). **Owner-verified 2026-10-18: the test contact is on Nextcloud**; the other clients had not synced or read another account. | Closed |
+| A sync should follow a create, change or delete when Auto Sync is on | The log showed it for create and delete; the request for a sync is now made in `Main.qml` instead of on the page. **Owner-verified 2026-10-18: "Sync funktioniert auch"** (after the change of a contact). | Closed |
+
 ### Raw output
 
 ```text

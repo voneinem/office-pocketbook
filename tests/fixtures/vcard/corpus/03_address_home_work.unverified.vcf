@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000103
+FN:Cy Gamma
+N:Gamma;Cy;;;
+ADR;TYPE=HOME:;;5 Example Way;Exampletown;EX;33333;Exampleland
+ADR;TYPE=WORK:;;6 Example Park;Exampletown;EX;33334;Exampleland
+END:VCARD

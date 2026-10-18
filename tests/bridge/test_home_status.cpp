@@ -6,6 +6,7 @@
 #include "home_bridge.h"
 #include "pbo/calendar_sync.h"
 #include "pbo/store.h"
+#include "pbo/vcard.h"
 #include "test_support.h"
 #include "tmp_dir.h"
 
@@ -152,6 +153,41 @@ PB_TEST(all_day_events_come_first_and_without_a_zone_no_times_are_listed) {
     z.refresh();
     PB_CHECK(z.needsZone());
     PB_CHECK_EQ(z.events().size(), 0);
+}
+
+PB_TEST(the_home_counts_the_contact_changes_that_wait_for_the_server) {
+    Env e;
+    HomeBridge h(e.config());
+    h.refresh();
+    PB_CHECK(h.contactsAvailable());
+    PB_CHECK_EQ(h.contactsPending(), 0);
+    pbo::AddressBook b;
+    b.href = "/dav/addressbooks/alice/contacts/";
+    b.name = "Contacts";
+    b.writable = true;
+    auto book = e.store->upsert_addressbook(b);
+    PB_CHECK(book.ok());
+    pbo::ContactPullBatch batch;
+    for (const char* uid : {"u-a", "u-b", "u-c"})
+        batch.upserts.push_back(pbo::contact_upsert_from_card(std::string("/dav/addressbooks/alice/contacts/") + uid + ".vcf", "\"e\"",
+                                                              std::string("BEGIN:VCARD\r\nVERSION:3.0\r\nUID:") + uid + "\r\nFN:X " + uid + "\r\nN:" + uid + ";X;;;\r\nEND:VCARD\r\n"));
+    PB_CHECK(e.store->apply_contact_pull(book.value, batch).ok());
+    PB_CHECK(e.store->debug_exec("UPDATE contact SET sync_state = 'pending_update' WHERE uid = 'u-a'").empty());
+    PB_CHECK(e.store->debug_exec("UPDATE contact SET sync_state = 'pending_delete' WHERE uid = 'u-b'").empty());
+    h.refresh();
+    PB_CHECK_EQ(h.contactsPending(), 2);   // the synced one does not count
+}
+
+PB_TEST(contacts_are_offered_only_with_a_calendar_server_account) {
+    Env e;
+    pbo::CalendarAccount feed_only;
+    feed_only.feed_url = "https://cal.example.org/feed.ics";
+    feed_only.feed_name = "Feed";
+    PB_CHECK(e.store->save_calendar_account(feed_only).ok());
+    HomeBridge h(e.config());
+    h.refresh();
+    PB_CHECK(!h.contactsAvailable());
+    PB_CHECK_EQ(h.contactsPending(), 0);
 }
 
 PB_TEST_MAIN()

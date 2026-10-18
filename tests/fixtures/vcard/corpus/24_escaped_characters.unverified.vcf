@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000124
+FN:Val Chi
+N:Chi;Val;;;
+ORG:Chi\, Psi & Co\; Ltd
+NOTE:back\\slash\, comma\; semicolon\nnew line
+END:VCARD

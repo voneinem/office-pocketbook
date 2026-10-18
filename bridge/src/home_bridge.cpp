@@ -12,8 +12,13 @@ void HomeBridge::refresh() {
     more_ = 0;
     events_.clear();
     needsZone_ = false;
+    contacts_ = false;
+    contactsPending_ = 0;
     mail_ = config_.store->mail_account().has_value();
-    calendar_ = config_.store->calendar_account().has_value();
+    const auto calendar_account = config_.store->calendar_account();
+    calendar_ = calendar_account.has_value();
+    contacts_ = calendar_account && !calendar_account->caldav_url.empty();
+    contactsPending_ = contacts_ ? config_.store->pending_contact_count() : 0;
     for (const pbo::Folder& f : config_.store->folders())
         if (f.role == "inbox") unread_ = f.unread_count;
 
