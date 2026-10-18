@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:4.0
+UID:7a1c3f10-0000-4000-8000-000000000111
+FN:Kai Kappa
+N:Kappa;Kai;;;
+TEL;VALUE=uri;TYPE="work,voice":tel:+1-555-0208
+EMAIL;TYPE=work:kai@example.org
+KIND:individual
+END:VCARD

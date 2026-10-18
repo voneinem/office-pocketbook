@@ -5,6 +5,7 @@
 #include <QTest>
 
 #include "pbo/store.h"
+#include "pbo/vcard.h"
 #include "sync_bridge.h"
 #include "test_support.h"
 #include "tmp_dir.h"
@@ -185,6 +186,67 @@ PB_TEST(a_clock_that_is_off_by_more_than_ten_minutes_is_reported_with_its_direct
     PB_CHECK(!sync.clockWarning());
     e.store->set_clock_skew(std::nullopt);
     PB_CHECK(!sync.clockWarning());
+}
+
+// ---- contacts wait for the server like events do (US5) ----------------------------------------------------------------------------------------
+
+namespace {
+
+// a contact row with the given sync state, as the sync tests of the contacts leave it
+void add_waiting_contact(pbo::Store& s, const std::string& state) {
+    pbo::AddressBook b;
+    b.href = "/dav/addressbooks/alice/contacts/";
+    b.name = "Contacts";
+    b.writable = true;
+    auto book = s.upsert_addressbook(b);
+    PB_CHECK(book.ok());
+    pbo::ContactPullBatch batch;
+    batch.upserts.push_back(pbo::contact_upsert_from_card("/dav/addressbooks/alice/contacts/a.vcf", "\"e1\"", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:u-a\r\nFN:Anna Beispiel\r\nN:Beispiel;Anna;;;\r\nEND:VCARD\r\n"));
+    PB_CHECK(s.apply_contact_pull(book.value, batch).ok());
+    PB_CHECK(s.debug_exec("UPDATE contact SET sync_state = '" + state + "'").empty());
+}
+
+}  // namespace
+
+PB_TEST(a_saved_changed_or_deleted_contact_counts_as_waiting_and_starts_a_sync_like_an_event) {
+    for (const char* state : {"pending_create", "pending_update", "pending_delete"}) {
+        Env e;
+        // (the message of the fixture is synced: nothing but the contact waits)
+        SyncBridge sync(e.config());
+        QSignalSpy finished(&sync, &SyncBridge::syncFinished);
+        PB_CHECK_EQ(sync.pendingCount(), 0);
+        add_waiting_contact(*e.store, state);
+        PB_CHECK_EQ(sync.pendingCount(), 1);
+        sync.noteChange(true);
+        PB_CHECK_EQ(finished.count(), 0);                   // a few seconds later, not at once
+        PB_CHECK(finished.wait(3000));
+        PB_CHECK_EQ(finished.count(), 1);
+    }
+}
+
+PB_TEST(a_contact_in_conflict_or_removed_on_the_server_waits_for_the_user_not_for_a_sync) {
+    for (const char* state : {"conflict", "server_deleted"}) {
+        Env e;
+        SyncBridge sync(e.config());
+        QSignalSpy finished(&sync, &SyncBridge::syncFinished);
+        add_waiting_contact(*e.store, state);
+        PB_CHECK_EQ(sync.pendingCount(), 0);                // the count is of changes the next sync sends
+        sync.noteChange(true);
+        QTest::qWait(300);
+        PB_CHECK_EQ(finished.count(), 0);
+    }
+}
+
+PB_TEST(with_auto_sync_switched_off_a_waiting_contact_starts_nothing) {
+    Env e;
+    e.store->set_setting("auto_sync", "0");
+    SyncBridge sync(e.config());
+    QSignalSpy finished(&sync, &SyncBridge::syncFinished);
+    add_waiting_contact(*e.store, "pending_update");
+    sync.noteChange(true);
+    QTest::qWait(300);
+    PB_CHECK_EQ(finished.count(), 0);
+    PB_CHECK_EQ(sync.pendingCount(), 1);
 }
 
 PB_TEST_MAIN()

@@ -1,5 +1,7 @@
 #include "compose_bridge.h"
 
+#include <QVariantMap>
+
 #include <algorithm>
 
 #include <QDateTime>
@@ -214,8 +216,8 @@ QString current_word(const QString& text, int* start) {
 
 }  // namespace
 
-QStringList ComposeBridge::suggest(const QString& text) const {
-    QStringList out;
+QVariantList ComposeBridge::suggestions(const QString& text) const {
+    QVariantList out;
     if (!config_.store) return out;
     int start = 0;
     const QString word = current_word(text, &start);
@@ -224,9 +226,21 @@ QStringList ComposeBridge::suggest(const QString& text) const {
     for (const auto& s : config_.store->address_suggestions(word.toStdString(), 8)) {
         const QString addr = QString::fromStdString(s.addr);
         if (before.contains(addr.toLower())) continue;   // already in the field
-        out << (s.name.empty() ? addr : QString::fromStdString(s.name) + QStringLiteral(" <") + addr + QLatin1Char('>'));
+        const QString insert = s.name.empty() ? addr : QString::fromStdString(s.name) + QStringLiteral(" <") + addr + QLatin1Char('>');
+        QVariantMap row;
+        row["text"] = insert;
+        row["display"] = s.from_contact && !s.label.empty() ? insert + QStringLiteral(" (") + QString::fromStdString(s.label) + QLatin1Char(')') : insert;
+        row["label"] = QString::fromStdString(s.label);
+        row["fromContact"] = s.from_contact;
+        out.push_back(row);
         if (out.size() >= 4) break;
     }
+    return out;
+}
+
+QStringList ComposeBridge::suggest(const QString& text) const {
+    QStringList out;
+    for (const QVariant& v : suggestions(text)) out << v.toMap().value(QStringLiteral("text")).toString();
     return out;
 }
 

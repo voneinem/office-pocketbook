@@ -161,6 +161,28 @@ Item {
                 enabled: settings.hasMailAccount
                 onToggled: function (on) { settings.sentByServer = on }
             }
+            Head { objectName: "settingsBooksHead"; text: qsTr("Address books"); visible: settings.addressBooks.length > 0 }
+            Repeater {
+                model: settings.addressBooks
+                delegate: SwitchRow {
+                    required property int index
+                    required property var modelData
+                    switchName: "settingsBook" + index
+                    label: modelData.name
+                    note: modelData.writable ? "" : qsTr("Read-only")
+                    checked: modelData.shown
+                    onToggled: function (on) { settings.setAddressBookShown(modelData.id, on) }
+                }
+            }
+            Text {
+                x: 30
+                width: parent.width - 60
+                visible: settings.addressBooks.length > 0
+                wrapMode: Text.Wrap
+                font.pixelSize: Style.captionSize
+                color: Style.ink
+                text: qsTr("A hidden address book is not shown or downloaded. Nothing is deleted: its contacts and any change waiting for the server stay.")
+            }
             Head { text: qsTr("Folders for sent mail, drafts and deleted mail"); visible: settings.hasMailAccount }
             Repeater {
                 model: settings.hasMailAccount ? settings.specialFolderList : []

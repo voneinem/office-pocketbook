@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:malformed-0001
+FN:<script>alert(1)</script>
+NOTE:<img src=http://tracker.example.org/x.png>
+URL:javascript:alert(1)
+EMAIL:<b>a</b>@example.org
+END:VCARD

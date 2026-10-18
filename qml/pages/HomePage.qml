@@ -112,6 +112,13 @@ Item {
                 onClicked: page.push("AgendaPage.qml")
             }
             InkRow {
+                objectName: "homeContacts"
+                visible: home.contactsAvailable
+                text: qsTr("Contacts")
+                chevron: true
+                onClicked: { contacts.refresh(); page.push("ContactsPage.qml") }
+            }
+            InkRow {
                 objectName: "homeSetupCalendar"
                 visible: !home.calendarConfigured
                 text: qsTr("Set up a calendar")

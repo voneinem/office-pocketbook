@@ -15,6 +15,8 @@ set(PBO_CORE_SOURCES
     src/types.cpp
     src/curl_session.cpp
     src/store.cpp
+    src/store_migrations.cpp
+    src/store_contacts.cpp
     src/store_mail.cpp
     src/store_outbox.cpp
     src/store_util.cpp
@@ -45,6 +47,11 @@ set(PBO_CORE_SOURCES
     src/provider_presets.cpp
     src/compose.cpp
     src/caldav.cpp
+    src/dav_common.cpp
+    src/vcard.cpp
+    src/carddav.cpp
+    src/contacts_sync.cpp
+    src/contact_edit.cpp
     src/calendar_sync.cpp
     src/ical.cpp
     src/rrule.cpp

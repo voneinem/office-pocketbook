@@ -3,6 +3,7 @@
 # scripts/extract-strings.py --check lists texts without a translation and translations without a text.
 %1 GB	%1 GB
 %1 MB	%1 MB
+%1: too long to edit here, kept unchanged	%1: zu lang zum Bearbeiten, bleibt unverändert
 %n change(s) waiting	%n Änderung wartet||%n Änderungen warten
 %n day(s)	%n Tag||%n Tage
 %n entries could not be read.	%n Eintrag konnte nicht gelesen werden.||%n Einträge konnten nicht gelesen werden.
@@ -16,6 +17,7 @@
 A Bcc address is not valid.	Eine Bcc-Adresse ist ungültig.
 A Cc address is not valid.	Eine Cc-Adresse ist ungültig.
 A change to "this and all later" events is not shown.	Eine Änderung für „diesen und alle späteren“ Termine wird nicht angezeigt.
+A contact needs a name, an organization, a phone number or an email address.	Ein Kontakt braucht einen Namen, eine Organisation, eine Telefonnummer oder eine E-Mail-Adresse.
 A few seconds after you read, star, move, delete, write or change an event, the reader connects to Wi-Fi and syncs. Off: changes wait for the Sync button.	Einige Sekunden nachdem Sie etwas lesen, markieren, verschieben, löschen, schreiben oder einen Termin ändern, verbindet sich der Reader mit dem WLAN und gleicht ab. Aus: Änderungen warten auf die Taste „Abgleichen“.
 A folder that is not found: choose one, or sync once so that the folders are known. Without a Trash folder deleting is permanent.	Ein Ordner wurde nicht gefunden: Wählen Sie einen aus oder gleichen Sie einmal ab, damit die Ordner bekannt sind. Ohne Papierkorb wird endgültig gelöscht.
 A recipient address is not valid.	Eine Empfängeradresse ist ungültig.
@@ -24,6 +26,12 @@ About	Info
 About this app	Über diese App
 About, licenses	Info, Lizenzen
 Accounts	Konten
+Add address	Adresse hinzufügen
+Add email	E-Mail hinzufügen
+Add phone	Telefonnummer hinzufügen
+Address	Adresse
+Address book	Adressbuch
+Address book: %1	Adressbuch: %1
 Agenda	Terminübersicht
 All day	Ganztägig
 All mail	Alle Nachrichten
@@ -49,7 +57,9 @@ Cc	Cc
 Cc and Bcc	Cc und Bcc
 Cc: %1	Cc: %1
 Change	Ändern
+Change contact	Kontakt ändern
 Change event	Termin ändern
+Changes to this contact have not been sent yet.	Änderungen an diesem Kontakt sind noch nicht gesendet.
 Changes to this event have not been sent yet.	Änderungen an diesem Termin wurden noch nicht gesendet.
 Check the clock	Uhr prüfen
 Choose a value	Wert wählen
@@ -58,9 +68,15 @@ Choose where you are. Times in your calendar are shown for this place.	Wählen S
 Choose your time zone first.	Wählen Sie zuerst Ihre Zeitzone.
 Choose your time zone to see the time.	Wählen Sie Ihre Zeitzone, um die Uhrzeit zu sehen.
 Choose your time zone to see the times.	Wählen Sie Ihre Zeitzone, um die Uhrzeiten zu sehen.
+City	Ort
+Clear	Löschen
 Close	Schließen
 Connecting to Wi-Fi …	Verbinde mit WLAN …
+Contact	Kontakt
+Contacts	Kontakte
+Contacts come from your calendar server. Set up a calendar server account in the calendar first.	Kontakte kommen von Ihrem Kalenderserver. Richten Sie zuerst im Kalender ein Kalenderserver-Konto ein.
 Copy	Kopieren
+Country	Land
 Cut	Ausschneiden
 Date and time	Datum und Uhrzeit
 Day	Tag
@@ -75,6 +91,7 @@ Delete this message?	Diese Nachricht löschen?
 Deleted mail (Trash)	Gelöschte Nachrichten (Papierkorb)
 Discard	Verwerfen
 Discard my version	Meine Version verwerfen
+Discard this change?	Diese Änderung verwerfen?
 Discard this message?	Diese Nachricht verwerfen?
 Discard your version?	Ihre Version verwerfen?
 Downloaded	Geladen
@@ -82,6 +99,7 @@ Downloading …	Lade …
 Drafts	Entwürfe
 Drafts %1	Entwürfe %1
 Edit	Bearbeiten
+Email	E-Mail
 Emoji	Emoji
 Encrypted from the start (TLS)	Von Anfang an verschlüsselt (TLS)
 Encryption	Verschlüsselung
@@ -97,6 +115,7 @@ Every connection is checked against the usual authorities. For a server with you
 Feed: 	Feed: 
 Fewer days: the next sync removes the older mail from this reader (it stays on the server). Mail with a change that has not synced, and drafts, are never removed.	Weniger Tage: Der nächste Abgleich entfernt die ältere Post von diesem Reader (sie bleibt auf dem Server). Nachrichten mit einer noch nicht abgeglichenen Änderung und Entwürfe werden nie entfernt.
 First day	Erster Tag
+First name	Vorname
 Folders	Ordner
 Folders for sent mail, drafts and deleted mail	Ordner für gesendete Post, Entwürfe und gelöschte Post
 Forward	Weiterleiten
@@ -117,11 +136,13 @@ Keep both	Beide behalten
 Keep editing	Weiter bearbeiten
 Keep my version	Meine Version behalten
 Keep the server's version	Version des Servers behalten
+Label	Bezeichnung
 Language	Sprache
 Language of the app	Sprache der App
 Larger than the limit of %1. Not downloaded.	Größer als die Grenze von %1. Nicht geladen.
 Largest attachment	Größter Anhang
 Last day	Letzter Tag
+Last name	Nachname
 Leave	Verlassen
 Leave without saving?	Ohne Speichern verlassen?
 License	Lizenz
@@ -139,6 +160,7 @@ Mark as unread	Als ungelesen markieren
 May have been sent (%1)	Wurde vielleicht gesendet (%1)
 Message	Nachricht
 Min	Min
+Mobile	Mobil
 Month	Monat
 More	Mehr
 Move to	Verschieben nach
@@ -146,6 +168,8 @@ Move to Trash	In den Papierkorb
 Move to the Trash?	In den Papierkorb verschieben?
 Move to …	Verschieben nach …
 Name of the feed (optional)	Name des Feeds (optional)
+New contact	Neuer Kontakt
+New contacts need a writable address book. The ones shown here are read-only.	Neue Kontakte brauchen ein beschreibbares Adressbuch. Die hier gezeigten sind schreibgeschützt.
 New event	Neuer Termin
 New message	Neue Nachricht
 Newest first	Neueste zuerst
@@ -153,7 +177,13 @@ Next day	Nächster Tag
 Next month	Nächster Monat
 Next page	Nächste Seite
 Next week	Nächste Woche
+No address book	Kein Adressbuch
+No address book was found on the server yet.	Auf dem Server wurde noch kein Adressbuch gefunden.
+No address book was found on the server yet. Tap the sync button to look for one.	Auf dem Server wurde noch kein Adressbuch gefunden. Tippen Sie auf die Synchronisieren-Taste, um danach zu suchen.
 No calendar yet	Noch kein Kalender
+No contact matches your search. Tap the cross to see all contacts.	Kein Kontakt passt zu Ihrer Suche. Tippen Sie auf das Kreuz, um alle Kontakte zu sehen.
+No contacts	Keine Kontakte
+No contacts yet	Noch keine Kontakte
 No drafts.	Keine Entwürfe.
 No events on this day.	Keine Termine an diesem Tag.
 No mail account yet	Noch kein Mailkonto
@@ -164,7 +194,9 @@ No upcoming events	Keine anstehenden Termine
 Not saved: the reader's storage may be full.	Nicht gespeichert: Der Speicher des Readers ist vielleicht voll.
 Not sent: %1	Nicht gesendet: %1
 Not synced yet	Noch nicht abgeglichen
+Note	Notiz
 Notes	Notizen
+Nothing found	Nichts gefunden
 Nothing found in the mail on this reader.	In der Post auf diesem Reader wurde nichts gefunden.
 Nothing is planned for today or tomorrow.	Für heute und morgen ist nichts geplant.
 Nothing is planned from today on. Tap the sync button to look for news.	Ab heute ist nichts geplant. Tippen Sie auf die Abgleich-Taste, um nach Neuem zu suchen.
@@ -180,7 +212,10 @@ Older mail	Ältere Post
 Older messages could not be loaded: %1.	Ältere Nachrichten konnten nicht geladen werden: %1.
 Oldest first	Älteste zuerst
 On for Gmail and Outlook.com: they file every sent message in Sent. Then the app does not upload a second copy.	Für Gmail und Outlook.com einschalten: Sie legen jede gesendete Nachricht selbst in „Gesendet“ ab. Dann lädt die App keine zweite Kopie hoch.
+On the server: %1	Auf dem Server: %1
 On the server: %1, %2	Auf dem Server: %1, %2
+Organization	Organisation
+Other	Sonstige
 Outbox	Postausgang
 Outbox %1	Postausgang %1
 Outgoing port	Port für Postausgang
@@ -194,21 +229,26 @@ Passwords are kept as plain text in a file on this reader; whether the storage k
 Passwords are kept as plain text in a file that only this app can read. Use app-specific passwords where your provider offers them.	Passwörter liegen als Klartext in einer Datei, die nur diese App lesen kann. Verwenden Sie app-spezifische Passwörter, wenn Ihr Anbieter sie anbietet.
 Passwords are kept as plain text in a file, and this reader's storage cannot make it private: anyone with USB access to the reader can read it. Use app-specific passwords.	Passwörter liegen als Klartext in einer Datei, und der Speicher dieses Readers kann sie nicht privat halten: Wer per USB auf den Reader zugreifen kann, kann sie lesen. Verwenden Sie app-spezifische Passwörter.
 Paste	Einfügen
+Phone	Telefon
 Picture not loaded yet	Bild noch nicht geladen
 Picture on the sender's server, not loaded	Bild auf dem Server des Absenders, nicht geladen
 Please check the marked field.	Bitte prüfen Sie das markierte Feld.
 Port	Port
+Postcode	Postleitzahl
 Press and hold a draft to delete it.	Einen Entwurf lange drücken, um ihn zu löschen.
 Previous day	Voriger Tag
 Previous month	Voriger Monat
 Previous page	Vorige Seite
 Previous week	Vorige Woche
 Provided by the reader	Vom Reader bereitgestellt
+Region	Region
+Remove	Entfernen
 Remove the star	Stern entfernen
 Repeating events can be changed in your calendar app.	Wiederkehrende Termine können in Ihrer Kalender-App geändert werden.
 Repeats: %1	Wiederholung: %1
 Reply	Antworten
 Reply to all	Allen antworten
+Retry	Erneut versuchen
 STARTTLS is only accepted on port 143.	STARTTLS wird nur auf Port 143 akzeptiert.
 Save	Speichern
 Saved in Downloads: %1	In „Downloads“ gespeichert: %1
@@ -216,6 +256,7 @@ Saved on this reader	Auf diesem Reader gespeichert
 Saved.	Gespeichert.
 Saving …	Speichere …
 Search	Suchen
+Search contacts	Kontakte suchen
 Security	Sicherheit
 Select all	Alles auswählen
 Send	Senden
@@ -243,6 +284,7 @@ Spam	Spam
 Star	Mit Stern markieren
 Starts (date)	Beginn (Datum)
 Starts (time)	Beginn (Uhrzeit)
+Street	Straße
 Subject	Betreff
 Sync	Abgleichen
 Sync after my changes	Nach meinen Änderungen abgleichen
@@ -254,14 +296,18 @@ Tap the gear to set up your calendar.	Tippen Sie auf das Zahnrad, um Ihren Kalen
 Tap to choose	Zum Auswählen tippen
 Test	Testen
 That folder does not exist on this account.	Dieser Ordner existiert in diesem Konto nicht.
+The address books hold no contacts. Tap the sync button to look for news.	Die Adressbücher enthalten keine Kontakte. Tippen Sie auf die Synchronisieren-Taste, um nach Neuem zu suchen.
 The answer is larger than this app accepts.	Die Antwort ist größer, als diese App akzeptiert.
 The app will stop treating the message as unsent. It will not be sent again.	Die App behandelt die Nachricht nicht mehr als ungesendet. Sie wird nicht erneut gesendet.
 The attachment limit must be between 1 and 100 MB.	Die Anhangsgrenze muss zwischen 1 und 100 MB liegen.
 The certificate is for another server name. Nothing was sent.	Das Zertifikat gilt für einen anderen Servernamen. Es wurde nichts gesendet.
+The change the server did not take is removed from this reader.	Die Änderung, die der Server nicht angenommen hat, wird von diesem Lesegerät entfernt.
 The character set of this message is not known; some letters may be wrong.	Der Zeichensatz dieser Nachricht ist unbekannt; einige Buchstaben sind möglicherweise falsch.
 The clock of this reader is about %n minute(s) ahead of the server's. Set the date and time in the reader's settings; events and times depend on it.	Die Uhr dieses Readers geht etwa %n Minute vor. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.||Die Uhr dieses Readers geht etwa %n Minuten vor. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.
 The clock of this reader is about %n minute(s) behind the server's. Set the date and time in the reader's settings; events and times depend on it.	Die Uhr dieses Readers geht etwa %n Minute nach. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.||Die Uhr dieses Readers geht etwa %n Minuten nach. Stellen Sie Datum und Uhrzeit in den Einstellungen des Readers ein; Termine und Zeiten hängen davon ab.
 The connection works. Tap Save to keep the account.	Die Verbindung funktioniert. Tippen Sie auf „Speichern“, um das Konto zu behalten.
+The contact could not be saved on this reader.	Der Kontakt konnte auf diesem Lesegerät nicht gespeichert werden.
+The contact is too big.	Der Kontakt ist zu groß.
 The data could not be upgraded to this version. Your data is unchanged and a backup copy was kept.	Die Daten konnten nicht auf diese Version umgestellt werden. Ihre Daten sind unverändert, eine Sicherungskopie wurde behalten.
 The data folder could not be opened (%1). Nothing was changed.	Der Datenordner konnte nicht geöffnet werden (%1). Es wurde nichts geändert.
 The data on this reader was written by a newer version of PB Office. Please install the newer version. Nothing was changed.	Die Daten auf diesem Reader stammen von einer neueren Version von PB Office. Bitte installieren Sie die neuere Version. Es wurde nichts geändert.
@@ -278,6 +324,7 @@ The feed host refused the request. Check the address.	Der Feed-Server hat die An
 The file could not be saved.	Die Datei konnte nicht gespeichert werden.
 The file custom-ca.pem could not be used and is ignored. Every connection is checked against the usual authorities; there is no way to skip the check.	Die Datei custom-ca.pem konnte nicht verwendet werden und wird ignoriert. Jede Verbindung wird gegen die üblichen Zertifizierungsstellen geprüft; die Prüfung lässt sich nicht umgehen.
 The last sync failed: %1.	Der letzte Abgleich ist fehlgeschlagen: %1.
+The last sync of the contacts failed: %1.	Die letzte Synchronisierung der Kontakte ist fehlgeschlagen: %1.
 The list of third-party licenses is unavailable.	Die Liste der Lizenzen von Drittanbietern ist nicht verfügbar.
 The mail on this reader is more than the space allows, and nothing older can be removed. Raise the space for mail, or shorten the days kept and sync.	Die Post auf diesem Reader ist mehr, als der Platz erlaubt, und es lässt sich nichts Älteres entfernen. Erhöhen Sie den Speicherplatz für Post oder verkürzen Sie die behaltenen Tage und gleichen Sie ab.
 The message and its text are deleted. It will not be sent.	Die Nachricht und ihr Text werden gelöscht. Sie wird nicht gesendet.
@@ -289,6 +336,7 @@ The message is deleted from the server. This cannot be undone.	Die Nachricht wir
 The message is no longer on the server.	Die Nachricht ist nicht mehr auf dem Server.
 The message may already have been delivered. If you send it again, the recipients may get it twice.	Die Nachricht wurde möglicherweise schon zugestellt. Wenn Sie sie erneut senden, erhalten die Empfänger sie eventuell doppelt.
 The message was moved on the server.	Die Nachricht wurde auf dem Server verschoben.
+The note is too long to edit here, kept unchanged.	Die Notiz ist zu lang zum Bearbeiten hier und bleibt unverändert.
 The number of days must be between 1 and 365.	Die Anzahl der Tage muss zwischen 1 und 365 liegen.
 The password is stored as plain text in a file on this reader. Whether the storage keeps it private is checked when you save. Use an app-specific password.	Das Passwort liegt als Klartext in einer Datei auf diesem Reader. Ob der Speicher sie privat hält, wird beim Speichern geprüft. Verwenden Sie ein app-spezifisches Passwort.
 The password was refused.	Das Passwort wurde abgelehnt.
@@ -300,6 +348,7 @@ The pictures could not be loaded (%1).	Die Bilder konnten nicht geladen werden (
 The server cannot be reached.	Der Server ist nicht erreichbar.
 The server did not accept your change.	Der Server hat Ihre Änderung nicht akzeptiert.
 The server did not answer in time.	Der Server hat nicht rechtzeitig geantwortet.
+The server did not take this contact: %1	Der Server hat diesen Kontakt nicht angenommen: %1
 The server does not know this address.	Der Server kennt diese Adresse nicht.
 The server does not look like a calendar server.	Der Server sieht nicht wie ein Kalenderserver aus.
 The server does not offer an encrypted connection. Nothing was sent.	Der Server bietet keine verschlüsselte Verbindung an. Es wurde nichts gesendet.
@@ -324,13 +373,27 @@ The time zone of this event is not known; its time is shown as written.	Die Zeit
 The user name or password was refused.	Benutzername oder Passwort wurden abgelehnt.
 There are no folders yet. Sync once to load them.	Es gibt noch keine Ordner. Gleichen Sie einmal ab, um sie zu laden.
 There are no older messages.	Es gibt keine älteren Nachrichten.
+There are too many entries.	Es gibt zu viele Einträge.
 There is no Trash folder, so the message was not deleted.	Es gibt keinen Papierkorb, daher wurde die Nachricht nicht gelöscht.
 There is no Trash folder. The message is deleted from the server. This cannot be undone.	Es gibt keinen Papierkorb. Die Nachricht wird vom Server gelöscht. Das lässt sich nicht rückgängig machen.
+There is no address book here that accepts new contacts.	Hier gibt es kein Adressbuch, das neue Kontakte annimmt.
 There is no calendar here that accepts new events.	Hier gibt es keinen Kalender, der neue Termine annimmt.
 There is no network connection. Turn on Wi-Fi and try again.	Es gibt keine Netzwerkverbindung. Schalten Sie das WLAN ein und versuchen Sie es erneut.
 There is not enough space on the reader.	Auf dem Reader ist nicht genug Platz.
 Third-party licenses	Lizenzen von Drittanbietern
+This address book is gone on the server.	Dieses Adressbuch gibt es auf dem Server nicht mehr.
+This address book is no longer available.	Dieses Adressbuch ist nicht mehr verfügbar.
+This address book is read-only.	Dieses Adressbuch ist schreibgeschützt.
 This calendar does not allow changes.	Dieser Kalender erlaubt keine Änderungen.
+This contact could not be read and cannot be changed here.	Dieser Kontakt konnte nicht gelesen werden und lässt sich hier nicht ändern.
+This contact is no longer available.	Dieser Kontakt ist nicht mehr vorhanden.
+This contact is waiting to be deleted on the server.	Dieser Kontakt wartet darauf, auf dem Server gelöscht zu werden.
+This contact is waiting to be deleted.	Dieser Kontakt wartet darauf, gelöscht zu werden.
+This contact was changed here and on the server. Decide that first.	Dieser Kontakt wurde hier und auf dem Server geändert. Entscheiden Sie das zuerst.
+This contact was changed here and on the server; both versions are kept.	Dieser Kontakt wurde hier und auf dem Server geändert; beide Fassungen bleiben erhalten.
+This contact was deleted on the server. Your version is kept.	Dieser Kontakt wurde auf dem Server gelöscht. Ihre Fassung bleibt erhalten.
+This email address is not valid.	Diese E-Mail-Adresse ist nicht gültig.
+This entry is too long to change here.	Dieser Eintrag ist zu lang, um ihn hier zu ändern.
 This event comes from a calendar feed and cannot be changed here.	Dieser Termin stammt aus einem Kalender-Feed und kann hier nicht geändert werden.
 This event has two versions. Choose one first.	Dieser Termin hat zwei Versionen. Wählen Sie zuerst eine aus.
 This event is being deleted.	Dieser Termin wird gelöscht.
@@ -362,6 +425,7 @@ Today and tomorrow	Heute und morgen
 Trash	Papierkorb
 Try again	Erneut versuchen
 Type a word and tap the magnifier. Only mail that is on this reader is searched.	Geben Sie ein Wort ein und tippen Sie auf die Lupe. Durchsucht wird nur Post, die auf diesem Reader liegt.
+Unreadable contact	Unlesbarer Kontakt
 Upgrade with STARTTLS	Mit STARTTLS umschalten
 Use a date like 2026-10-20.	Verwenden Sie ein Datum wie 2026-10-20.
 Use a port from 1 to 65535.	Verwenden Sie einen Port von 1 bis 65535.
@@ -379,11 +443,16 @@ What do you want to do?	Was möchten Sie tun?
 Where	Ort
 Where: %1	Ort: %1
 Which time zone are you in?	In welcher Zeitzone sind Sie?
+Work	Dienstlich
 Write a message	Nachricht schreiben
 Year	Jahr
+You deleted this contact.	Sie haben diesen Kontakt gelöscht.
 You deleted this event.	Sie haben diesen Termin gelöscht.
+Your changes to this contact are deleted from this reader.	Ihre Änderungen an diesem Kontakt werden von diesem Lesegerät gelöscht.
+Your changes to this contact are deleted from this reader. The server's version stays.	Ihre Änderungen an diesem Kontakt werden von diesem Lesegerät gelöscht. Die Version des Servers bleibt erhalten.
+Your changes to this contact are lost.	Ihre Änderungen an diesem Kontakt gehen verloren.
 Your changes to this event are deleted from this reader.	Ihre Änderungen an diesem Termin werden von diesem Reader gelöscht.
-Your changes to this event are deleted from this reader. The server's version stays.	Ihre Änderungen an diesem Termin werden von diesem Reader gelöscht. Die Version des Servers bleibt.
+Your changes to this event are deleted from this reader. The server's version stays.	Ihre Änderungen an diesem Termin werden von diesem Reader gelöscht. Die Version des Servers bleibt erhalten.
 Your changes to this event are lost.	Ihre Änderungen an diesem Termin gehen verloren.
 Your e-mail address	Ihre E-Mail-Adresse
 Your name (optional)	Ihr Name (optional)
@@ -391,9 +460,12 @@ Your own address in the account settings is not valid.	Ihre eigene Adresse in de
 Your own certificate authority is loaded (%n certificate(s)). Every connection is still checked; a certificate that cannot be verified is refused.	Ihre eigene Zertifizierungsstelle ist geladen (%n Zertifikat). Jede Verbindung wird weiterhin geprüft; ein Zertifikat, das sich nicht prüfen lässt, wird abgelehnt.||Ihre eigene Zertifizierungsstelle ist geladen (%n Zertifikate). Jede Verbindung wird weiterhin geprüft; ein Zertifikat, das sich nicht prüfen lässt, wird abgelehnt.
 Your password is kept in a file that only this app can read.	Ihr Passwort liegt in einer Datei, die nur diese App lesen kann.
 Your password is stored on this reader like the mail password. Use an app-specific password if your provider offers one.	Ihr Passwort liegt wie das Mailpasswort auf diesem Reader. Verwenden Sie ein app-spezifisches Passwort, wenn Ihr Anbieter eines anbietet.
+Yours: %1	Ihre: %1
 Yours: %1, %2	Ihre: %1, %2
 a recipient address was refused	eine Empfängeradresse wurde abgelehnt
 could not apply	konnte nicht angewendet werden
+deleted on the server	auf dem Server gelöscht
+failed	fehlgeschlagen
 no Sent folder is known yet	noch kein Ordner „Gesendet“ bekannt
 no unread mail	keine ungelesene Post
 not chosen	nicht gewählt
@@ -430,3 +502,11 @@ two versions	zwei Versionen
 unavailable	nicht verfügbar
 unknown	unbekannt
 unread	ungelesen
+Delete contact?	Kontakt löschen?
+Delete %1? The deletion is sent to the server at the next sync.	„%1“ löschen? Das Löschen wird beim nächsten Abgleich an den Server gesendet.
+Deletion waiting: %1	Löschen wartet: %1
+%1 more deletions are waiting for the next sync.	%1 weitere Löschungen warten auf den nächsten Abgleich.
+Undo	Rückgängig
+Address books	Adressbücher
+Read-only	Nur lesbar
+A hidden address book is not shown or downloaded. Nothing is deleted: its contacts and any change waiting for the server stay.	Ein ausgeblendetes Adressbuch wird weder angezeigt noch geladen. Es wird nichts gelöscht: Seine Kontakte und jede Änderung, die auf den Server wartet, bleiben erhalten.

@@ -301,7 +301,7 @@ PB_TEST(no_account_means_nothing_to_do) {
 
 PB_TEST(the_step_list_has_its_final_shape) {
     const auto& names = pbo::sync_step_names();
-    const std::vector<std::string> want = {"outbox", "mail_push", "mail_pull", "calendar_push", "calendar_pull", "finish"};
+    const std::vector<std::string> want = {"outbox", "mail_push", "mail_pull", "calendar_push", "calendar_pull", "contacts_push", "contacts_pull", "finish"};
     PB_CHECK(names == want);
 }
 

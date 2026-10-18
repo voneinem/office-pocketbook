@@ -44,7 +44,7 @@ Item {
     property string suggestWhich: ""
     function suggestFor(which, text) {
         page.suggestWhich = which
-        page.suggestions = compose.suggest(text)
+        page.suggestions = compose.suggestions(text)
     }
     function chooseSuggestion(entry) {
         var f = suggestWhich === "cc" ? ccField : (suggestWhich === "bcc" ? bccField : toField)
@@ -133,10 +133,10 @@ Item {
                     model: page.suggestions
                     delegate: InkRow {
                         required property int index
-                        required property string modelData
+                        required property var modelData
                         objectName: "composeSuggestion" + index
-                        text: modelData
-                        onClicked: page.chooseSuggestion(modelData)
+                        text: modelData.display
+                        onClicked: page.chooseSuggestion(modelData.text)
                     }
                 }
             }

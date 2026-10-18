@@ -4,6 +4,9 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include "contact_bridge.h"
+#include "contact_env.h"
+#include "contacts_model.h"
 #include "mail_env.h"
 #include "sync_bridge.h"
 #include "worker.h"
@@ -73,6 +76,33 @@ PB_TEST(with_auto_sync_off_a_change_sends_nothing_until_the_user_syncs) {
     sync.syncNow();                                                  // the user's own sync
     PB_CHECK(finished.wait(20000));
     PB_CHECK(e.imap->flags_of("INBOX", 1).count("\\Seen") == 1);
+}
+
+PB_TEST(open_contact_pages_make_no_request_and_a_change_waits_for_the_sync_when_auto_sync_is_off) {
+    pbtest::ContactEnv e;
+    e.server->put_card("contacts", "a.vcf", pbtest::contact_vcf("u-a", "Anna", "Beispiel", "TEL:+1 555 0101\r\n"));
+    PB_CHECK(e.pull().ok());
+    PB_CHECK(e.store->set_setting("auto_sync", "0").ok());
+    const size_t requests = e.server->log().size();
+    ContactsModel::Config mc;
+    mc.store = e.store.get();
+    ContactsModel model(mc);
+    ContactBridge::Config bc;
+    bc.store = e.store.get();
+    bc.clock = &e.clock;
+    bc.random = &e.random;
+    ContactBridge contact(bc);
+    model.refresh();
+    model.search(QStringLiteral("anna"));
+    model.clearSearch();
+    contact.open(model.rows().at(0).toMap()["contactId"].toLongLong());
+    PB_CHECK(contact.loadEdit());
+    QVariantMap f = contact.edit();
+    f["family"] = QStringLiteral("Neu");
+    PB_CHECK(contact.save(f));                         // the change is only stored
+    QTest::qWait(1200);                                // the app stays open and idle
+    PB_CHECK_EQ(e.server->log().size(), requests);
+    PB_CHECK_EQ(e.store->pending_contacts().size(), size_t(1));
 }
 
 PB_TEST_MAIN()

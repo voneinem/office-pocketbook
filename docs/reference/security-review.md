@@ -1,7 +1,7 @@
-# Security review of PB Office (mail and calendar)
+# Security review of PB Office (mail, calendar and contacts)
 
 Date: 2026-10-16. Scope: the core library (`core/`), the Qt bridge (`bridge/`), the QML pages (`qml/`), the
-app (`app/`), the build and test tooling and the repository, for the feature `001-email-calendar-mvp`.
+app (`app/`), the build and test tooling and the repository, for the features `001-email-calendar-mvp` and `002-server-contacts` (section 8).
 Every claim names the automated test or the repeatable command that backs it. Run everything with
 `scripts/pre-merge.sh`.
 
@@ -95,9 +95,36 @@ runs them and never deletes them.
 - **O2** Whether the reader's storage honours file permissions for `credentials` (the app measures it and
   says what it finds; the finding on the real device is in `docs/device-test-checklist.md`, item DT-SEC-1).
 - **O3** Everything marked "fake server" is unverified against real Gmail, Outlook.com, iCloud, generic
-  IMAP/SMTP, Nextcloud and OpenCloud (`docs/live-server-checklist.md`).
+  IMAP/SMTP, Nextcloud and OpenCloud, including CardDAV address books (`docs/live-server-checklist.md`).
 - **O4** Commits made before the clean-up of the baseline may contain local absolute paths in their
   history. Rewrite the history before the first public push if that matters.
 - **O5** `gitleaks` is not installed on the development machine; the built-in scan is weaker.
 - **O6** The performance budgets (cold start, page turn, first sync of 500 messages) are measured on the
   host only; the reader figures are device items.
+
+## 8. Contacts (feature 002-server-contacts)
+
+All servers in these tests are fakes (`tests/support/fake_carddav_server.h`): every claim is "fake server" until the
+rows LV-K1 ... of `docs/live-server-checklist.md` are done.
+
+| Requirement | Evidence |
+|-------------|----------|
+| CardDAV uses the same verified TLS as everything else; an expired, wrong-host or untrusted certificate is refused before any credential is sent | `test_tls_cert_failures` (`carddav_discovery_refuses_an_expired_certificate_and_sends_no_credentials`, `..._a_certificate_for_another_host_...`, `carddav_refuses_a_certificate_from_an_authority_the_client_does_not_trust`); CardDAV goes through `DavSession`/`CurlTransport`, the only place that sets `VERIFYPEER`/`VERIFYHOST` (rule R1) |
+| A redirect never forwards credentials to another host and never goes to plain `http://` | `test_redirect_credentials` (`carddav_discovery_does_not_forward_credentials_...`, `carddav_discovery_refuses_a_redirect_to_plain_http`); `DavSession` ignores a resource named on another host (`test_dav_common`, `test_carddav_discovery`) |
+| The account is the calendar server account: no second password, nothing new is stored; a hidden address book is not contacted | `test_contacts_sync_pull` (`a_hidden_book_is_not_downloaded`, `without_a_calendar_server_account_the_pull_does_nothing`); the credentials file has no new field |
+| Cards and XML are untrusted input: bounded, total, no recursion | `test_vcard_parse`, `test_malformed_vcard` (truncation at every offset, byte flips, nesting, huge lines, 5,000 lines, 100 entries per kind; `too_large` / `malformed` / `multiple_cards` / `no_uid` keys), `test_malformed_xml` and `test_carddav_discovery` (CardDAV answers) |
+| Photos and other heavy properties are never stored; the server's copy keeps them | `test_contacts_sync_pull` (`photos_are_not_stored_whether_the_server_honours_the_property_list_or_not`), `test_contact_push` (`editing_a_contact_from_the_server_reads_the_full_card_first_and_keeps_what_the_app_does_not_show`, `editing_the_cards_of_the_corpus_loses_none_of_their_other_properties_on_the_server`: 24+ cards of the corpus, 100 % of the unedited lines kept) |
+| Contact text is plain text; nothing starts a call, a mail or a navigation | `tst_contacts_flow` (`test_the_detail_offers_no_call_mail_or_link_action`, `plainTextEverywhere`); rules U5 / U6 of `scripts/check-ui-style.sh` |
+| Logs hold no names, numbers, addresses, notes, host names or paths of contacts | `test_contact_push` (`the_log_of_a_push_...`, `the_log_of_an_update_...`, `the_log_of_a_delete_...`), `test_contacts_sync_pull` (`the_log_of_a_pull_...`), `test_contacts_bridge` (`opening_the_list_and_a_contact_writes_nothing_personal_to_the_log`); rule R8 (event keys `contact`, `phone`, `email`, `book`, `org`, `note` are refused; self-test in `check_constitution_selftest`); codes `contacts.pull`, `contacts.push`, `contacts.conflict` in `core/src/log_codes.h` |
+| Every write is conditional: create `If-None-Match: *`, update `If-Match: <etag>` (of the look at the full card for a card the reader holds in part), delete `If-Match: <etag>`; a card that changed on the server is never overwritten or deleted by an older version | `test_contact_push`, `test_contact_conflict` (three ways a conflict comes about, for update and for delete; both versions kept; `KeepMine`/`KeepServer`/`KeepBoth`), `test_contact_server_deleted`, `test_carddav_requests` |
+| A lost answer never makes a second card; a lost answer to an update or a delete converges | `test_contact_push` (`an_answer_lost_after_the_server_took_the_card_never_makes_a_second_card`, `the_card_of_an_update_whose_answer_was_lost_is_recognised_at_the_next_pull`, `an_answer_lost_after_the_server_deleted_the_card_ends_with_the_next_push`); the resource path is chosen and stored before the first request |
+| Killing the app at random moments loses and doubles nothing | `test_contacts_kill` (create/push/pull, edit/push with the photo kept on the server, delete/push; 100 kills each) |
+| Local work is never evicted, overwritten by a pull, or deleted by hiding a book or by a shortened mail window | `test_eviction_sync` (`eviction_never_selects_a_contact_and_never_touches_one_with_local_work`), `test_contacts_sync_pull`, `test_contact_push` (`a_hidden_book_still_sends_what_waits_...`), `test_store_threads` |
+| The upgrade of the database is one-way and loses nothing: a copy is kept until the next successful start; the previous build refuses the file untouched | `test_store_migration_2` (every row survives; the backup is kept until the next successful start; a failing step rolls the whole upgrade back; an older build refuses the file and leaves it untouched; `sync_state` rebuilt); the ARM build and the reader are device items (DT-CT-1) |
+| Nothing leaves the reader except to the configured server; an idle app with open Contacts pages makes no request | `test_idle_no_network` (`open_contact_pages_make_no_request_and_a_change_waits_for_the_sync_when_auto_sync_is_off`) |
+| Recipient suggestions read the local store only and send nothing | `test_address_suggestions`, `test_compose_bridge` (`picking_a_contact_suggestion_adds_the_recipient_without_the_label_and_changes_nothing_else`) |
+
+Residual points: (a) vCards of real clients differ; the in-house parser is tested against fixtures written from the RFCs and
+from memory of other clients, all `.unverified`. (b) A server that ignores `If-Match` on a `PUT` or `DELETE` could overwrite a
+change made between the look and the write; the app cannot detect that (LV-K8). (c) A card kept for "keep both" loses the
+properties the reader never held (photo, birthday): the server's own card, which is kept, still has them.

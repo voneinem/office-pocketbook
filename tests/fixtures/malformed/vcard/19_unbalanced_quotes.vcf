@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:malformed-0001
+TEL;TYPE="HOME:+1 555 0304
+EMAIL;TYPE=WORK:"a@example.org
+ADR;LABEL="x;y:;;street;;;;
+END:VCARD

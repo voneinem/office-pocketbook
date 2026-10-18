@@ -85,6 +85,18 @@ value) · **F** failed (what happened).
 | DT-WR-4 | Wi-Fi drops during sending | the message shows "may have been sent"; the app never sends it again by itself | U | | |
 | DT-WR-5 | Copy and paste inside the app (long press); text copied in PB Notes cannot be pasted (no system clipboard) | as described | O | 2026-10-16 | Owner tested the menus; the missing system clipboard is accepted |
 
+## Contacts (spec 002)
+
+| ID | Item | Expected | State | Date | Value / note |
+|----|------|----------|-------|------|--------------|
+| DT-CT-1 | Upgrade the database from schema 1 to 2 on the reader: install over an existing build with mail and calendar; start; check `pboffice.db.bak` exists; start again; the backup is gone; then try the previous build (it must refuse the file with a clear message and leave it untouched) | all mail and events still there; contacts empty until the first sync | O | 2026-10-18 | First start migrated and synced (log); `.bak` written at launch. Not yet tried: second start removes it, previous build refuses the file |
+| DT-CT-2 | List and search with a large address book (about 2,000 contacts) | page turn under 1 s, search under 2 s | U | | |
+| DT-CT-3 | The on-screen keyboard in the contact form: the field being typed in stays visible, phone and email fields use the matching keyboard | usable | O | 2026-10-18 | Owner: the note field was covered by the keyboard in the first builds; after three fixes the field and the cursor line stay above the keyboard ("viel besser"). Phone and email keyboards not itemised |
+| DT-CT-4 | Edit a contact with Wi-Fi off, then sync | marked "not synced" until the sync; the server has the change; photo and birthday of the card are still on the server | U | | |
+| DT-CT-5 | Memory and storage with 2,000 contacts | database grown by under 20 MB; peak memory within the limits of DT-RD-7 | U | | |
+| DT-CT-6 | Find a contact by typing part of its name and read its number (SC-002) | under 20 s | U | | |
+| DT-CT-7 | Create a contact with a name, a number and an email address using only the on-screen keyboard (SC-003) | under 2 minutes | U | | |
+
 ## Recording
 
 For each measured value write the build version (About) and the date. Findings that change a design decision

@@ -129,19 +129,27 @@ Result<std::unique_ptr<Store>> Store::open(const std::string& dir, Clock& clock,
         version = 1;
     }
 
-    if (version < target) {   // one-way upgrade steps
+    bool upgraded = false;
+    if (version < target) {   // one-way upgrade steps: the built-in ones, then those a test adds
+        upgraded = true;
         if (existed_nonempty && !copy_file(path, backup)) {
             sqlite3_close(db);
             return fail("migration_failed", "the backup before the upgrade could not be written");
         }
         bool ok = exec(db, "BEGIN IMMEDIATE", &err);
         while (ok && version < target) {
-            auto it = std::find_if(options.extra_migrations.begin(), options.extra_migrations.end(),
-                                   [&](const Migration& m) { return m.from == version; });
-            if (it == options.extra_migrations.end()) { ok = false; break; }
-            ok = exec(db, it->sql.c_str(), &err) && exec(db, ("PRAGMA user_version=" + std::to_string(it->to)).c_str(), &err);
-            version = it->to;
+            const Migration* step = nullptr;
+            for (const Migration& m : builtin_migrations())
+                if (m.from == version) step = &m;
+            if (!step)
+                for (const Migration& m : options.extra_migrations)
+                    if (m.from == version) step = &m;
+            if (!step) { ok = false; break; }
+            ok = exec(db, step->sql.c_str(), &err) && exec(db, ("PRAGMA user_version=" + std::to_string(step->to)).c_str(), &err);
+            version = step->to;
         }
+        // the copy made above stays until the next successful start has opened the upgraded database (research R-07)
+        if (ok && existed_nonempty) ok = exec(db, "INSERT OR REPLACE INTO settings(key, value) VALUES('schema_backup_pending', '1')", &err);
         if (ok) ok = exec(db, "COMMIT", &err);
         if (!ok) {
             exec(db, "ROLLBACK", nullptr);
@@ -153,7 +161,13 @@ Result<std::unique_ptr<Store>> Store::open(const std::string& dir, Clock& clock,
             sqlite3_close(db);
             return fail("integrity_failed", "the database failed its check after the upgrade");
         }
-        if (existed_nonempty) std::remove(backup.c_str());   // no lingering copy of the data
+    }
+    if (!upgraded) {   // the previous start upgraded the file and this one opened it: the copy of the old file is not needed any more
+        std::string pending;
+        if (query_text(db, "SELECT value FROM settings WHERE key = 'schema_backup_pending'", &pending, &err) && pending == "1") {
+            std::remove(backup.c_str());
+            exec(db, "DELETE FROM settings WHERE key = 'schema_backup_pending'", &err);
+        }
     }
 
     // objects of schema 1 that are created when missing (a database made by an earlier build has no trigger yet):

@@ -5,6 +5,7 @@
 #include <QTest>
 
 #include "pbo/store.h"
+#include "pbo/vcard.h"
 #include "settings_bridge.h"
 #include "test_support.h"
 #include "tmp_dir.h"
@@ -188,6 +189,43 @@ PB_TEST(the_language_is_automatic_until_chosen_and_only_known_languages_are_kept
     SettingsBridge third(e.config());
     PB_CHECK_EQ(third.language().toStdString(), std::string("en"));
     PB_CHECK_EQ(third.languageChoices().size(), 3);
+}
+
+PB_TEST(the_address_books_are_listed_and_hiding_one_deletes_nothing) {
+    Env e;
+    SettingsBridge none(e.config());
+    PB_CHECK_EQ(none.addressBooks().size(), 0);
+    pbo::AddressBook a, b;
+    a.href = "/dav/ab/family/";
+    a.name = "Family";
+    a.writable = true;
+    b.href = "/dav/ab/company/";
+    b.name = "Company";
+    b.writable = false;
+    const auto ida = e.store->upsert_addressbook(a);
+    const auto idb = e.store->upsert_addressbook(b);
+    PB_CHECK(ida.ok() && idb.ok());
+    pbo::ContactPullBatch batch;
+    batch.upserts.push_back(pbo::contact_upsert_from_card("/dav/ab/company/c.vcf", "\"e\"", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:u-c\r\nFN:Carla Firma\r\nN:Firma;Carla;;;\r\nEND:VCARD\r\n"));
+    PB_CHECK(e.store->apply_contact_pull(idb.value, batch).ok());
+    SettingsBridge s(e.config());
+    s.refresh();
+    const QVariantList books = s.addressBooks();
+    PB_CHECK_EQ(books.size(), 2);
+    PB_CHECK_EQ(books[0].toMap()["name"].toString().toStdString(), std::string("Company"));   // in the order of their names
+    PB_CHECK(books[0].toMap()["shown"].toBool());
+    PB_CHECK(!books[0].toMap()["writable"].toBool());
+    PB_CHECK(books[1].toMap()["writable"].toBool());
+    QSignalSpy changed(&s, &SettingsBridge::changed);
+    PB_CHECK(s.setAddressBookShown(static_cast<qlonglong>(idb.value), false));
+    PB_CHECK(changed.count() >= 1);
+    PB_CHECK(!s.addressBooks()[0].toMap()["shown"].toBool());
+    PB_CHECK_EQ(e.store->contacts_count(""), 0);                                      // not listed ...
+    PB_CHECK_EQ(e.store->debug_query("SELECT count(*) FROM contact"), std::string("1"));   // ... and nothing deleted (FR-025)
+    PB_CHECK(s.setAddressBookShown(static_cast<qlonglong>(idb.value), true));
+    PB_CHECK_EQ(e.store->contacts_count(""), 1);
+    PB_CHECK(!s.setAddressBookShown(4242, false));
+    PB_CHECK_EQ(s.errorKey().toStdString(), std::string("not_found"));
 }
 
 PB_TEST_MAIN()

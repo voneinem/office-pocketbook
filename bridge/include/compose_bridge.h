@@ -5,6 +5,7 @@
 // sync's job (the page starts a sync when the reader is online, and tells the user that the message waits otherwise).
 
 #include <QObject>
+#include <QVariantList>
 #include <QString>
 #include <QTimer>
 
@@ -55,6 +56,9 @@ public:
     // Address suggestions for a recipient field: `text` is the whole field; only the part after the last comma counts (at least 2 characters) and
     // addresses already in the field are not offered again. Entries are "Name <address>" or "address". Cached and sent mail, offline.
     Q_INVOKABLE QStringList suggest(const QString& text) const;
+    // The same with more: rows {text, display, label, fromContact}. `text` is what goes into the field ("Name <address>" or "address"); `display` is what the
+    // list shows (the same, and "(label)" after an address from a contact); contacts come first.
+    Q_INVOKABLE QVariantList suggestions(const QString& text) const;
     // The field with the part being typed replaced by the chosen entry and ", " after it.
     Q_INVOKABLE QString applySuggestion(const QString& text, const QString& suggestion) const;
 

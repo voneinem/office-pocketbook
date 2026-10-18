@@ -60,7 +60,7 @@ Item {
               : root.noNetwork ? qsTr("No network connection. Turn on Wi-Fi and try again.")
               : sync.syncing ? qsTr("Syncing …")
               : root.note.length > 0 ? root.note + root.tail()
-              : sync.problemKey.length > 0 ? qsTr("The last sync failed: %1.").arg(root.causeText(sync.problemKey)) + root.tail()
+              : sync.problemKey.length > 0 ? (sync.problemArea === "contacts" ? qsTr("The last sync of the contacts failed: %1.") : qsTr("The last sync failed: %1.")).arg(root.causeText(sync.problemKey)) + root.tail()
               : (sync.lastSyncText.length > 0 ? qsTr("Synced %1").arg(sync.lastSyncText) : qsTr("Not synced yet")) + root.tail()
     }
     RowDivider { anchors.bottom: parent.bottom; x: 30; width: parent.width - 60 }

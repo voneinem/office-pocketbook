@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Schulze;Karl;Heinz;Dr.;jun.
+FN:Dr. Karl Heinz Schulze jun.
+TEL;TYPE=CELL:0170 555 0120
+TEL;TYPE=HOME:+1 555 0121
+EMAIL;TYPE=HOME:karl@example.org
+ADR;TYPE=HOME:;;3 Example Road;Exampletown;;11111;Exampleland
+NOTE:Android note
+UID:7a1c3f10-0000-4000-8000-000000000003
+END:VCARD

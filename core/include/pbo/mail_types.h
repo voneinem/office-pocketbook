@@ -149,7 +149,7 @@ struct SyncState {
     std::optional<int64_t> last_started, last_finished, last_success;
     std::string outcome = "never";   // never, running, success, partial, failed, offline
     std::string problem_key;         // first problem, "" = none
-    std::string problem_area;        // "", mail, calendar, outbox
+    std::string problem_area;        // "", mail, calendar, outbox, contacts
     std::string counts_json = "{}";
     std::optional<int64_t> clock_skew_s;
 };

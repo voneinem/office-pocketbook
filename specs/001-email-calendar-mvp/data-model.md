@@ -365,3 +365,7 @@ older build refuses a newer database. `PRAGMA user_version` is the only version 
 ## Note 2026-10-16: settings keys added
 
 `settings.ui_language` (`auto` | `en` | `de`, absent = `auto`) and `settings.window_days_applied` (the days of mail kept at the last sync; when `account_mail.sync_days` is smaller at the next sync, the mail outside the new window is removed, never anything with local work).
+
+## Note 2026-10-18: schema 2
+
+Schema 2 (address books and contacts, the first built-in migration) is described in `specs/002-server-contacts/data-model.md`.

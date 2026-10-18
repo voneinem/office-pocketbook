@@ -12,6 +12,7 @@ Column {
     property string errorText
     signal accepted()
     signal textEdited()
+    signal fieldFocus(Item item, bool gained)   // the text control got or lost the focus
 
     spacing: 10
 
@@ -35,6 +36,7 @@ Column {
         background: Rectangle { color: Style.paper; radius: Style.radiusField; border.width: Style.ruleWidth; border.color: Style.ink }
         onAccepted: root.accepted()
         onTextEdited: root.textEdited()
+        onActiveFocusChanged: root.fieldFocus(field, activeFocus)
         TextMenu { target: field }
     }
     Text {

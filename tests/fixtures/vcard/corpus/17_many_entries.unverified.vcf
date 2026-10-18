@@ -1,0 +1,30 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000117
+FN:Otto Omikron
+N:Omikron;Otto;;;
+TEL;TYPE=CELL:+1 555 0300
+TEL;TYPE=CELL:+1 555 0301
+TEL;TYPE=CELL:+1 555 0302
+TEL;TYPE=CELL:+1 555 0303
+TEL;TYPE=CELL:+1 555 0304
+TEL;TYPE=CELL:+1 555 0305
+TEL;TYPE=CELL:+1 555 0306
+TEL;TYPE=CELL:+1 555 0307
+TEL;TYPE=CELL:+1 555 0308
+TEL;TYPE=CELL:+1 555 0309
+TEL;TYPE=CELL:+1 555 0310
+TEL;TYPE=CELL:+1 555 0311
+EMAIL:otto0@example.org
+EMAIL:otto1@example.org
+EMAIL:otto2@example.org
+EMAIL:otto3@example.org
+EMAIL:otto4@example.org
+EMAIL:otto5@example.org
+EMAIL:otto6@example.org
+EMAIL:otto7@example.org
+EMAIL:otto8@example.org
+EMAIL:otto9@example.org
+EMAIL:otto10@example.org
+EMAIL:otto11@example.org
+END:VCARD

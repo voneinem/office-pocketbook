@@ -81,6 +81,25 @@ Columns for every table: Dovecot / Gmail / Outlook.com / own provider (mail), Ne
 | LV-W7 | A repeating event: shown, not editable, deletable as a whole | as in the app text | U | U |
 | LV-W8 | The calendar is removed on the server | the app says so; its events stay until the user decides | U | U |
 
+## Contacts: CardDAV (spec 002)
+
+Needs a calendar server account (the address books come from the same server). Columns: Nextcloud / OpenCloud.
+
+| ID | Item | Expected | Nextcloud | OpenCloud |
+|----|------|----------|-----------|-----------|
+| LV-K1 | Discovery from each form of the calendar address the user may enter (server address, `/dav/`, a calendar home): principal, address book home, address books with names and writability | address books listed; read-only ones marked; a server with none says "No address book was found on the server." | U | U |
+| LV-K2 | `sync-collection` on address books; if it is missing, the ctag and full-list fallback | the same rows either way; a second sync fetches nothing | U | U |
+| LV-K3 | The `address-data` property list is honoured (cards come without the photo); note whether the server ignores it (the app strips the photo itself) | no photo is stored; `partial` cards | U | U |
+| LV-K4 | Create a contact on the reader, sync | one card on the server with a name, number and address; `If-None-Match: *` accepted; the mark "not synced" goes | U | U |
+| LV-K5 | Edit a contact that another client made (photo, birthday, URL, `X-` lines, groups such as `item1.X-ABLabel`) | after the sync those properties are still on the server (GET-merge-PUT) | U | U |
+| LV-K6 | Delete on the reader; delete on the server while a change waits on the reader | the card is deleted with `If-Match`; or "deleted on the server" asks | U | U |
+| LV-K7 | Edit on both sides before a sync | "To decide" shows both versions; nothing is overwritten | U | U |
+| LV-K8 | `If-Match` with a stale ETag on `PUT` and on `DELETE` | `412`; handled as a conflict; note any server that ignores the header | U | U |
+| LV-K9 | Answers `403`, `404`, `413`, `507` on a write | the contact stays marked with the reason; nothing lost | U | U |
+| LV-K10 | Cards written by other clients (Thunderbird, DAVx5/Android, Apple Contacts, Nextcloud web): names, labels, vCard 3.0 and 4.0, a card without `UID` or with a duplicate `UID` | readable list; unreadable cards shown as such, the rest unaffected | U | U |
+| LV-K11 | Hide an address book in Settings; sync; show it again | not downloaded while hidden; waiting changes still sent; nothing deleted | U | U |
+| LV-K12 | A redirect at the server (http to https, or to another path) | followed on https only; credentials not forwarded | U | U |
+
 ## Recording
 
 For every `V` or `F` add the date and one line (no addresses, no host names that identify the owner). Put

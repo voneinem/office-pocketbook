@@ -25,5 +25,6 @@ InkRow 1.0 InkRow.qml
 ModelPager 1.0 ModelPager.qml
 SyncStatusLine 1.0 SyncStatusLine.qml
 EventRow 1.0 EventRow.qml
+ContactRow 1.0 ContactRow.qml
 SelectionMenu 1.0 SelectionMenu.qml
 TextMenu 1.0 TextMenu.qml

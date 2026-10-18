@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:7a1c3f10-0000-4000-8000-000000000107
+FN:Gus Eta
+N:Eta;Gus;;;
+item1.EMAIL;type=INTERNET;type=pref:gus@example.org
+item1.X-ABLabel:_$!<Work>!$_
+item2.EMAIL;type=INTERNET:gus2@example.org
+item2.X-ABLabel:Club
+END:VCARD

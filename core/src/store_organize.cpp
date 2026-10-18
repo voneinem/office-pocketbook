@@ -3,9 +3,11 @@
 #include <sqlite3.h>
 
 #include <algorithm>
+#include <set>
 #include <cctype>
 
 #include "pbo/store.h"
+#include "pbo/utf8.h"
 #include "store_sql.h"
 #include "store_util.h"
 
@@ -320,18 +322,63 @@ std::vector<Store::AddressSuggestion> Store::address_suggestions(const std::stri
     while (!prefix.empty() && std::isspace(static_cast<unsigned char>(prefix.front()))) prefix.erase(prefix.begin());
     if (prefix.empty() || limit < 1) return out;
     // LIKE with the wildcards of the input escaped; the name is compared word by word as well ("anna b" finds "Anna Berg")
-    std::string like;
-    for (char c : prefix) {
-        if (c == '%' || c == '_' || c == '\\') like += '\\';
-        like += c;
+    auto escaped = [](const std::string& text) {
+        std::string like;
+        for (char c : text) {
+            if (c == '%' || c == '_' || c == '\\') like += '\\';
+            like += c;
+        }
+        return like;
+    };
+    std::set<std::string> seen;   // lower-cased addresses already offered
+
+    // the contacts first
+    {
+        std::string lowered = prefix;
+        for (char& c : lowered) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        const std::string folded = sort_key(prefix);
+        Stmt st(db_,
+                "SELECT e.addr, c.display_name, e.label FROM contact_email e JOIN contact c ON c.id = e.contact_id JOIN addressbook b ON b.id = c.addressbook_id"
+                " WHERE b.shown = 1 AND c.sync_state <> 'pending_delete' AND (e.addr_key LIKE ?1 ESCAPE '\\' OR (?2 <> '' AND (' ' || c.search_text) LIKE ?3 ESCAPE '\\'))"
+                " ORDER BY c.sort_key, c.id, e.idx LIMIT ?4");
+        if (st.ok()) {
+            st.bind_text(1, escaped(lowered) + "%");
+            st.bind_text(2, folded);
+            st.bind_text(3, "% " + escaped(folded) + "%");
+            st.bind_int64(4, limit);
+            while (st.step() == SQLITE_ROW) {
+                AddressSuggestion s;
+                s.addr = st.text(0);
+                s.name = st.text(1);
+                s.label = st.text(2);
+                s.from_contact = true;
+                std::string key = s.addr;
+                for (char& c : key) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                if (!seen.insert(key).second) continue;   // the same address twice in one contact or in two
+                out.push_back(std::move(s));
+            }
+        }
     }
-    like += '%';
+    if (static_cast<int>(out.size()) >= limit) {
+        out.resize(static_cast<size_t>(limit));
+        return out;
+    }
+
+    // then the cached and sent mail
     Stmt st(db_,
             "SELECT addr, name FROM address_suggestion WHERE addr LIKE ?1 ESCAPE '\\' OR name LIKE ?1 ESCAPE '\\' ORDER BY uses DESC, last_seen DESC, addr LIMIT ?2");
     if (!st.ok()) return out;
-    st.bind_text(1, like);
-    st.bind_int64(2, limit);
-    while (st.step() == SQLITE_ROW) out.push_back({st.text(0), st.text(1)});
+    st.bind_text(1, escaped(prefix) + "%");
+    st.bind_int64(2, limit + static_cast<int64_t>(out.size()));   // (room for the ones a contact already gave)
+    while (st.step() == SQLITE_ROW && static_cast<int>(out.size()) < limit) {
+        std::string key = st.text(0);
+        for (char& c : key) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (!seen.insert(key).second) continue;
+        AddressSuggestion s;
+        s.addr = st.text(0);
+        s.name = st.text(1);
+        out.push_back(std::move(s));
+    }
     return out;
 }
 

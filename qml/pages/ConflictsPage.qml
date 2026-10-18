@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import ".."
 
-// Things that need a decision. Events: changed here and on the server (both versions are kept until you choose), or deleted on the server after you
-// changed them here. Messages: a change you made (read, star, move, delete) could not be applied because the message is gone or moved on the server,
+// Things that need a decision. Events and contacts: changed here and on the server (both versions are kept until you choose), or deleted on the server
+// after you changed them here. Messages: a change you made (read, star, move, delete) could not be applied because the message is gone or moved on the server,
 // or the server refused it. Nothing is overwritten or dropped by itself. A choice that drops your version asks first. Paged, never scrolled.
 Item {
     id: page
@@ -45,11 +45,18 @@ Item {
         page.apply(value)
     }
     function apply(value) {
-        if (value === "recreate") conflicts.recreate(page.chosen.eventId)
-        else if (value === "discard") conflicts.discard(page.chosen.eventId)
-        else conflicts.resolve(page.chosen.eventId, value)
-        agenda.refresh()
-        dayModel.refresh()
+        if (page.chosen.kind === "contact") {
+            if (value === "recreate") conflicts.recreateContact(page.chosen.contactId)
+            else if (value === "discard") conflicts.discardContact(page.chosen.contactId)
+            else conflicts.resolveContact(page.chosen.contactId, value)
+            contacts.refresh()
+        } else {
+            if (value === "recreate") conflicts.recreate(page.chosen.eventId)
+            else if (value === "discard") conflicts.discard(page.chosen.eventId)
+            else conflicts.resolve(page.chosen.eventId, value)
+            agenda.refresh()
+            dayModel.refresh()
+        }
         sync.refreshState()
     }
 
@@ -100,7 +107,8 @@ Item {
                     color: Style.ink
                     textFormat: Text.PlainText
                     text: row.modelData.kind === "message" ? qsTr("From: %1").arg(row.modelData.line1)
-                                                   : (row.modelData.deleting ? qsTr("You deleted this event.") : qsTr("Yours: %1, %2").arg(row.modelData.mineTitle).arg(row.modelData.mineWhen))
+                          : (row.modelData.kind === "contact" ? (row.modelData.deleting ? qsTr("You deleted this contact.") : qsTr("Yours: %1").arg(row.modelData.mineTitle))
+                             : (row.modelData.deleting ? qsTr("You deleted this event.") : qsTr("Yours: %1, %2").arg(row.modelData.mineTitle).arg(row.modelData.mineWhen)))
                 }
                 Text {
                     objectName: "conflictServer" + row.index
@@ -111,7 +119,9 @@ Item {
                     color: Style.ink
                     textFormat: Text.PlainText
                     text: row.modelData.kind === "message" ? page.messageReason(row.modelData.errorKey)
-                                                   : (row.modelData.state === "server_deleted" ? qsTr("It was deleted on the server.") : qsTr("On the server: %1, %2").arg(row.modelData.serverTitle).arg(row.modelData.serverWhen))
+                          : (row.modelData.state === "server_deleted" ? qsTr("It was deleted on the server.")
+                             : (row.modelData.kind === "contact" ? qsTr("On the server: %1").arg(row.modelData.serverTitle)
+                                : qsTr("On the server: %1, %2").arg(row.modelData.serverTitle).arg(row.modelData.serverWhen)))
                 }
                 Text {
                     x: 30; y: 16 + Style.bodySize + 2 * Style.captionSize + 42
@@ -165,9 +175,11 @@ Item {
     ConfirmDialog {
         id: confirm
         objectName: "conflictConfirm"
+        readonly property bool forContact: page.chosen !== null && page.chosen.kind === "contact"
         title: page.confirmAction === "discard" ? qsTr("Discard your version?") : qsTr("Use the server's version?")
-        text: page.confirmAction === "discard" ? qsTr("Your changes to this event are deleted from this reader.")
-                                               : qsTr("Your changes to this event are deleted from this reader. The server's version stays.")
+        text: page.confirmAction === "discard" ? (forContact ? qsTr("Your changes to this contact are deleted from this reader.") : qsTr("Your changes to this event are deleted from this reader."))
+                                               : (forContact ? qsTr("Your changes to this contact are deleted from this reader. The server's version stays.")
+                                                             : qsTr("Your changes to this event are deleted from this reader. The server's version stays."))
         acceptText: page.confirmAction === "discard" ? qsTr("Discard") : qsTr("Use the server's")
         cancelText: qsTr("Cancel")
         onAccepted: page.apply(page.confirmAction)

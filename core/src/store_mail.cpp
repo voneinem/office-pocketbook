@@ -375,7 +375,8 @@ int Store::unsynced_count() const {
     Stmt st(db_,
             "SELECT (SELECT count(*) FROM message WHERE local_state <> 'synced' AND stale = 0)"
             " + (SELECT count(*) FROM outbox)"   // a sent message leaves the outbox
-            " + (SELECT count(*) FROM event WHERE sync_state IN ('pending_create','pending_update','pending_delete'))");
+            " + (SELECT count(*) FROM event WHERE sync_state IN ('pending_create','pending_update','pending_delete'))"
+            " + (SELECT count(*) FROM contact WHERE sync_state IN ('pending_create','pending_update','pending_delete'))");
     if (!st.ok() || st.step() != SQLITE_ROW) return 0;
     return static_cast<int>(st.int64(0));
 }

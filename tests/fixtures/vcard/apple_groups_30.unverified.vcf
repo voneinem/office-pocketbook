@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//Apple Inc.//iOS 17//EN
+N:Muster;Max;;;
+FN:Max Muster
+ORG:Example Bank;
+item1.EMAIL;type=INTERNET;type=pref:max@example.org
+item1.X-ABLabel:_$!<Work>!$_
+item2.EMAIL;type=INTERNET:max.privat@example.org
+item2.X-ABLabel:Private mail
+TEL;type=CELL;type=VOICE;type=pref:+1 555 0110
+item3.TEL:+1 555 0111
+item3.X-ABLabel:_$!<Mother>!$_
+item4.ADR;type=pref:;;2 Example Lane;Exampletown;;54321;Exampleland
+item4.X-ABADR:xx
+item4.X-ABLabel:_$!<Home>!$_
+BDAY:1990-11-02
+X-SOCIALPROFILE;type=twitter:x-apple:examplemax
+UID:7a1c3f10-0000-4000-8000-000000000002
+REV:2026-02-01T08:00:00Z
+END:VCARD

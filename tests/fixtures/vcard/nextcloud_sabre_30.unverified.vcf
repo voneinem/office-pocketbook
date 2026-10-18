@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//Sabre//Sabre VObject 4.5//EN
+UID:7a1c3f10-0000-4000-8000-000000000001
+FN:Anna Beispiel
+N:Beispiel;Anna;;;
+ORG:Example Works GmbH;Sales
+TITLE:Head of Sales
+TEL;TYPE=WORK,VOICE:+1 555 0100
+TEL;TYPE=CELL:+1 555 0101
+EMAIL;TYPE=WORK:anna@example.org
+EMAIL;TYPE=HOME:anna.home@example.org
+ADR;TYPE=WORK:;;1 Example Street;Exampletown;EX;12345;Exampleland
+NOTE:Met at the fair.\nSecond line.
+URL:https://www.example.org/anna
+BDAY:1985-04-12
+CATEGORIES:friends,work
+REV:20260101T120000Z
+END:VCARD

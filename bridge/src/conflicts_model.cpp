@@ -3,7 +3,9 @@
 #include <QVariantMap>
 
 #include "calendar_text.h"
+#include "pbo/contact_edit.h"
 #include "pbo/event_edit.h"
+#include "pbo/vcard.h"
 
 namespace {
 
@@ -41,6 +43,18 @@ void ConflictsModel::refresh() {
         }
     }
     if (config_.store) {
+        for (const pbo::ContactProblem& p : config_.store->contact_problems()) {
+            QVariantMap r;
+            r["kind"] = QStringLiteral("contact");
+            r["contactId"] = static_cast<qlonglong>(p.contact_id);
+            r["state"] = QString::fromStdString(p.state);
+            r["deleting"] = p.deleting;
+            r["bookName"] = QString::fromStdString(p.addressbook_name);
+            r["mineTitle"] = QString::fromStdString(p.display_name);
+            if (!p.server_vcf.empty()) r["serverTitle"] = QString::fromStdString(pbo::contact_derive(pbo::parse_vcard(p.server_vcf)).display_name);
+            r["title"] = QString::fromStdString(p.display_name) + QStringLiteral(" · ") + QString::fromStdString(p.addressbook_name);
+            rows_.push_back(r);
+        }
         for (const pbo::MessageHeader& m : config_.store->messages_with_errors()) {
             QVariantMap r;
             r["kind"] = QStringLiteral("message");
@@ -75,3 +89,24 @@ bool ConflictsModel::acknowledgeMessage(qlonglong messageId) { return config_.st
 
 bool ConflictsModel::recreate(qlonglong eventId) { return config_.store && done(QStringLiteral("recreate"), config_.store->recreate_event(eventId)); }
 bool ConflictsModel::discard(qlonglong eventId) { return config_.store && done(QStringLiteral("discard"), config_.store->discard_event(eventId)); }
+
+bool ConflictsModel::resolveContact(qlonglong contactId, const QString& choice) {
+    pbo::ContactChoice c;
+    if (choice == QLatin1String("mine")) c = pbo::ContactChoice::KeepMine;
+    else if (choice == QLatin1String("server")) c = pbo::ContactChoice::KeepServer;
+    else if (choice == QLatin1String("both")) c = pbo::ContactChoice::KeepBoth;
+    else return false;
+    if (!config_.store || !config_.clock || !config_.random) return false;
+    pbo::ContactEditDeps deps{*config_.store, *config_.clock, *config_.random};
+    return done(QStringLiteral("resolve"), pbo::resolve_contact_conflict(deps, contactId, c));
+}
+
+bool ConflictsModel::recreateContact(qlonglong contactId) {
+    if (!config_.store || !config_.clock || !config_.random) return false;
+    pbo::ContactEditDeps deps{*config_.store, *config_.clock, *config_.random};
+    return done(QStringLiteral("recreate"), pbo::recreate_contact(deps, contactId));
+}
+
+bool ConflictsModel::discardContact(qlonglong contactId) {
+    return config_.store && done(QStringLiteral("discard"), pbo::discard_server_deleted_contact(*config_.store, contactId));
+}

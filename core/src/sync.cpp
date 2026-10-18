@@ -28,7 +28,7 @@ const char* state_name(SyncOutcome o) {
 }  // namespace
 
 const std::vector<std::string>& sync_step_names() {
-    static const std::vector<std::string> names = {"outbox", "mail_push", "mail_pull", "calendar_push", "calendar_pull", "finish"};
+    static const std::vector<std::string> names = {"outbox", "mail_push", "mail_pull", "calendar_push", "calendar_pull", "contacts_push", "contacts_pull", "finish"};
     return names;
 }
 
@@ -208,8 +208,53 @@ SyncReport run_sync(SyncDeps& deps, const Credentials& credentials, const SyncOp
         }
     }
     const bool calendar_failed = step("calendar_pull").ran && !step("calendar_pull").error.ok() && !report.needs_zone && step("calendar_pull").error.cls != ErrorClass::Cancelled;
+    // contacts: the address books of the calendar server account (after the calendar, so that a contacts problem never delays mail or events)
+    bool contacts_ok = false, contacts_push_failed = false;
+    {
+        const auto cal_account = deps.store.calendar_account();
+        if (options.push && options.contacts && deps.http && !cancelled && cal_account && !cal_account->caldav_url.empty() && !deps.store.pending_contacts().empty()) {
+            progress("contacts_push");
+            StepResult& s = step("contacts_push");
+            s.ran = true;
+            ContactsSyncDeps cd{deps.store, *deps.http, deps.clock, deps.cancel};
+            const Error e = deps.cancel.requested() ? make_error(ErrorClass::Cancelled, "cancelled", "the sync was cancelled")
+                                                    : push_contacts(cd, credentials.calendar_password, &report.contacts_push_counts);
+            s.error = e;
+            if (e.cls == ErrorClass::Cancelled) {
+                cancelled = true;
+            } else if (!e.ok()) {
+                contacts_push_failed = true;
+                if (report.first_problem.ok()) {
+                    report.first_problem = e;
+                    report.problem_area = "contacts";
+                }
+            }
+        }
+        if (options.contacts && deps.http && !cancelled && cal_account && !cal_account->caldav_url.empty()) {
+            progress("contacts_pull");
+            StepResult& s = step("contacts_pull");
+            s.ran = true;
+            ContactsSyncDeps cd{deps.store, *deps.http, deps.clock, deps.cancel};
+            const Error e = deps.cancel.requested() ? make_error(ErrorClass::Cancelled, "cancelled", "the sync was cancelled")
+                                                    : pull_contacts(cd, credentials.calendar_password, &report.contacts_counts);
+            s.error = e;
+            if (e.cls == ErrorClass::Cancelled) {
+                cancelled = true;
+            } else if (!e.ok()) {
+                if (report.first_problem.ok()) {
+                    report.first_problem = e;
+                    report.problem_area = "contacts";
+                }
+            } else {
+                contacts_ok = true;
+            }
+        }
+    }
+    const bool contacts_failed = (step("contacts_pull").ran && !step("contacts_pull").error.ok() && step("contacts_pull").error.cls != ErrorClass::Cancelled) || contacts_push_failed;
     // something worked and something did not: partial
     if ((calendar_ok && push_failed) || (mail_ok && calendar_failed) || (calendar_ok && !mail_ok && mail_ran && step("mail_pull").error.cls != ErrorClass::Cancelled)) partial = true;
+    if (contacts_failed && (mail_ok || calendar_ok || contacts_ok)) partial = true;
+    if (contacts_ok && !contacts_push_failed && ((mail_ran && !mail_ok && step("mail_pull").error.cls != ErrorClass::Cancelled) || calendar_failed || push_failed)) partial = true;
     progress("finish");
     step("finish").ran = true;
 
@@ -228,7 +273,10 @@ SyncReport run_sync(SyncDeps& deps, const Credentials& credentials, const SyncOp
         if (report.outcome == SyncOutcome::Success) state.last_success = deps.clock.now();
         state.counts_json = "{\"folders\":" + std::to_string(report.counts.folders) + ",\"new_messages\":" + std::to_string(report.counts.new_messages) + ",\"removed\":" + std::to_string(report.counts.removed) + ",\"flags_updated\":" + std::to_string(report.counts.flags_updated) +
                             ",\"sent\":" + std::to_string(report.outbox_counts.sent) + ",\"events\":" + std::to_string(report.calendar_counts.changed + report.calendar_counts.feed_events) + ",\"events_removed\":" + std::to_string(report.calendar_counts.removed) +
-                            ",\"events_sent\":" + std::to_string(report.push_counts.created + report.push_counts.updated + report.push_counts.deleted) + ",\"event_conflicts\":" + std::to_string(report.push_counts.conflicts) + "}";
+                            ",\"events_sent\":" + std::to_string(report.push_counts.created + report.push_counts.updated + report.push_counts.deleted) + ",\"event_conflicts\":" + std::to_string(report.push_counts.conflicts) +
+                            ",\"contacts\":" + std::to_string(report.contacts_counts.changed) + ",\"contacts_removed\":" + std::to_string(report.contacts_counts.removed) +
+                            ",\"contacts_sent\":" + std::to_string(report.contacts_push_counts.created + report.contacts_push_counts.updated + report.contacts_push_counts.deleted) +
+                            ",\"contact_conflicts\":" + std::to_string(report.contacts_push_counts.conflicts) + "}";
     }
     deps.store.write_sync_state(state);
     log::event("sync.finished", {log::text("outcome", state_name(report.outcome)), log::count("new_messages", report.counts.new_messages),

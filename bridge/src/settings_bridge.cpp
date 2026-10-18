@@ -1,10 +1,33 @@
 #include "settings_bridge.h"
 
+#include <QVariantMap>
+
 SettingsBridge::SettingsBridge(Config config, QObject* parent) : QObject(parent), config_(std::move(config)) { account_ = config_.store->mail_account(); }
 
 void SettingsBridge::refresh() {
     account_ = config_.store->mail_account();
     emit changed();
+}
+
+QVariantList SettingsBridge::addressBooks() const {
+    QVariantList out;
+    for (const pbo::AddressBook& b : config_.store->addressbooks()) {
+        if (!b.present_on_server) continue;
+        QVariantMap m;
+        m["id"] = static_cast<qlonglong>(b.id);
+        m["name"] = QString::fromStdString(b.name);
+        m["shown"] = b.shown;
+        m["writable"] = b.writable;
+        out.push_back(m);
+    }
+    return out;
+}
+
+bool SettingsBridge::setAddressBookShown(qlonglong id, bool shown) {
+    const pbo::Error e = config_.store->set_addressbook_shown(id, shown);
+    error_ = e.ok() ? QString() : QString::fromStdString(e.key);
+    emit changed();
+    return e.ok();
 }
 
 bool SettingsBridge::autoSync() const { return config_.store->setting("auto_sync") != "0"; }

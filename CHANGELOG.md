@@ -3,6 +3,27 @@
 Versions follow MAJOR.MINOR.PATCH. A branch that changes the product raises VERSION and adds an entry here
 (`scripts/check-version-bump.sh`). The tag `v<version>` is set after the merge.
 
+## 0.3.0 - 2026-10-18
+
+Contacts from the calendar server. Everything below is tested on the host against fake servers (CardDAV included);
+nothing is verified against a real server or on a reader yet (`docs/live-server-checklist.md` LV-K1 ..., 
+`docs/device-test-checklist.md` DT-CT-1 ...).
+
+### Contacts
+- The address books of the calendar server account (CardDAV, same address and password). A list in name order with
+  search, the full contact on a page of its own, address books can be hidden in Settings (nothing is deleted).
+- Create, change and delete contacts offline. Changes are marked "not synced" and sent at the next sync with
+  conditional requests; a deletion can be undone until the server confirmed it.
+- A contact changed on both sides, or removed on the server after you changed it, keeps both versions and appears
+  under "To decide".
+- Changing a contact keeps what the app does not show (photo, birthday, links, groups) on the server. Photos are not
+  stored on the reader. Entries too long to edit are kept unchanged and can be removed.
+- Typing a recipient suggests the addresses of your contacts first, then those from mail.
+
+### Data
+- **One-way database upgrade (schema 2).** The first start migrates the database and keeps `pboffice.db.bak` until
+  the next successful start; the previous build refuses the new file. See `INSTALL.md`.
+
 ## 0.2.0 - 2026-10-16
 
 First version of PB Office, the offline-first email and calendar app for the PocketBook InkPad One, started

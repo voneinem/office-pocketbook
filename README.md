@@ -1,10 +1,10 @@
 # PB Office
 
-Offline-first **email and calendar** for the PocketBook InkPad One: an IMAP/SMTP mail client and a CalDAV calendar
-built for an e-ink screen, with no background network activity.
+Offline-first **email, calendar and contacts** for the PocketBook InkPad One: an IMAP/SMTP mail client, a CalDAV calendar
+and a CardDAV address book built for an e-ink screen, with no background network activity.
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-0.2.0-informational.svg)
+![Version](https://img.shields.io/badge/version-0.3.0-informational.svg)
 ![Platform: PocketBook InkPad One](https://img.shields.io/badge/platform-PocketBook%20InkPad%20One-lightgrey.svg)
 ![Status: in development](https://img.shields.io/badge/status-in%20development-orange.svg)
 
@@ -48,6 +48,14 @@ is a separate app: it has its own binary, launcher and data folder and never tou
 - Create, change and delete events. Repeating events are read only. A change made on both sides keeps both
   versions until you decide.
 
+**Contacts**
+- The address books of your calendar server account (CardDAV; the same address and password, nothing more to set up).
+- A list in name order with search, the full contact on a page of its own. Create, change and delete contacts; a change
+  made on both sides keeps both versions until you decide. Address books can be hidden in Settings.
+- Typing a recipient suggests the addresses of your contacts first.
+- Photos are not stored on the reader and are left untouched on the server; properties the app does not show
+  (birthday, links, groups) are kept when you change a contact.
+
 **Syncing**
 - A sync at app start (only when Wi-Fi is already connected), the Sync button, and an automatic sync a few seconds
   after your own changes (this switches Wi-Fi on).
@@ -65,7 +73,8 @@ The interface is English with a German translation (Settings > Language; texts i
 - A PocketBook InkPad One (other models are untested).
 - A mail account with IMAP and SMTP over TLS. App-specific passwords are recommended (Gmail and Outlook.com
   require them).
-- Optional: a CalDAV server (Nextcloud first, OpenCloud second) or an `.ics` feed address over `https`.
+- Optional: a CalDAV/CardDAV server (Nextcloud first, OpenCloud second) or an `.ics` feed address over `https`.
+  Contacts need the server account, not the feed.
 
 ## Installation
 
@@ -76,7 +85,7 @@ reader and register the app in the Applications menu. The full steps are in [`IN
 
 1. Open **PB Office** from the Applications menu.
 2. Enter the mail account (server, port, security, user name, password, address) and use **Test** before **Save**.
-3. Optionally add the calendar account in Settings.
+3. Optionally add the calendar account in Settings; its address books appear under **Contacts** on the start page.
 4. Use the page buttons to turn pages. Everything you change is stored on the reader first and reaches the server
    at the next sync.
 
@@ -86,7 +95,10 @@ reader and register the app in the Applications menu. The full steps are in [`IN
   the strictest permissions the reader's storage allows. The storage is FAT, which probably cannot enforce them:
   anyone with USB access to the reader can read the file. The app measures the protection after saving and says
   so on the account page and in About. Use app-specific passwords.
-- Logs hold counts and codes only: no address, subject or file name.
+- Logs hold counts and codes only: no address, subject, contact or file name.
+- Contacts live in the database on the reader and nowhere else; no photos are stored, and nothing is sent except to the
+  server you configured. The first start of this version upgrades the database to a new format (one way): a copy is
+  kept until the next start, and an older build refuses the new file.
 - The app opens no link and loads no remote content unless you tap "Load pictures" on one mail (one plain GET per
   picture over https, without cookies or referrer; the sender learns that the mail was read).
 - It connects only to the servers you configure.

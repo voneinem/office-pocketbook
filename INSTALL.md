@@ -54,6 +54,12 @@ log) is kept; the app upgrades its database by itself, after making a backup cop
 with a clear message if the data were written by a newer version. PB Office never touches the files of
 PB Notes or of InkFeed (it only reads and writes its own files).
 
+**Upgrading to the version with contacts changes the database format (schema 2) in one direction.** The first start
+of the new build migrates `pboffice.db` and keeps the copy `pboffice.db.bak` until the next successful start. The
+previous build refuses the new file ("written by a newer version") and leaves it untouched, so to go back, restore
+the `.bak` copy from the first start before it is deleted. Contacts appear after the first sync with the calendar
+server account.
+
 ## 3. Start the app
 
 Open Applications, then the group you added the entry to, and start **PB Office**. The first time it asks

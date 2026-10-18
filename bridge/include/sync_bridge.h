@@ -21,6 +21,8 @@ class SyncBridge : public QObject {
     Q_PROPERTY(QString lastSyncText READ lastSyncText NOTIFY stateChanged)
     // "" = no problem, else the cause key of the first problem of the last sync (auth_failed, cert_expired, ...)
     Q_PROPERTY(QString problemKey READ problemKey NOTIFY stateChanged)
+    // "" | "mail" | "calendar" | "outbox" | "contacts": the part of the app that had the first problem of the last sync
+    Q_PROPERTY(QString problemArea READ problemArea NOTIFY stateChanged)
     // Whether the reader has a network connection (set by the page that watches the device) and how many local changes and unsent
     // messages wait for the next sync (FR-033: shown on every page)
     Q_PROPERTY(bool online READ online NOTIFY onlineChanged)
@@ -58,6 +60,7 @@ public:
     bool syncing() const { return syncing_; }
     QString lastSyncText() const;
     QString problemKey() const;
+    QString problemArea() const;
     bool online() const { return online_; }
     int pendingCount() const;
     bool needsZone() const { return needsZone_; }
