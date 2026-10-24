@@ -26,6 +26,9 @@
 #   R9 The identifier pbnotes (the application this one was started from) appears in no tracked file except
 #        under docs/reference/, in NOTICE and under licenses/ (the planning documents in specs/ and .specify/
 #        describe the rename, tests/templates/ holds the old perf tests until they are rewritten).
+#   R11 The launcher platform/pocketbook/pboffice.app expands the arguments of a hand-over from another app (a text, maybe a secret link) only between the
+#        comment lines "# handoff-capture-begin" and "# handoff-capture-end", never prints, logs or evals them (echo, logger, eval, a printf that is not redirected
+#        into the pending entry, output redirection to the log), and never switches on shell tracing (set -x, set -o xtrace); the capture block must exist.
 #   R10 libcurl tracing is never switched on (it would write LOGIN / AUTH PLAIN passwords to the log):
 #        CURLOPT_VERBOSE, CURLOPT_DEBUGFUNCTION, CURLOPT_DEBUGDATA, CURLOPT_STDERR, curl -v / --verbose /
 #        --trace* in core/, bridge/, app/ and scripts/.
@@ -111,6 +114,27 @@ scan() {
                 fi
                 ;;
         esac
+        # R11: the launcher and the arguments of a hand-over (spec 003 FR-015, FR-017)
+        if [ "$f" = platform/pocketbook/pboffice.app ]; then
+            out="$(awk -v f="$f" '
+                /^[[:space:]]*#/ {
+                    if ($0 ~ /handoff-capture-begin/) { inb = 1; seen_begin = 1 }
+                    else if ($0 ~ /handoff-capture-end/) { inb = 0; seen_end = 1 }
+                    next
+                }
+                /(^|[;&|[:space:]])set[[:space:]]+(-[a-zA-Z]*x[a-zA-Z]*|-o[[:space:]]+xtrace)/ { print "R11 " f ":" NR ": shell tracing prints every expanded argument: " $0; bad = 1 }
+                $0 ~ /\$([@*1-9]|\{[1-9])/ {
+                    if (!inb) { print "R11 " f ":" NR ": the arguments of a hand-over are expanded outside the capture block: " $0; bad = 1 }
+                    else if ($0 ~ /(^|[;&|[:space:]])(echo|logger|eval|cat|tee)([;&|[:space:]]|$)|>&[0-9]|\/dev\/(stdout|stderr|tty)|sh[[:space:]]+-c/) {
+                        print "R11 " f ":" NR ": an argument of a hand-over is printed or evaluated: " $0; bad = 1
+                    }
+                    else if ($0 ~ /(^|[;&|[:space:]])printf[[:space:]]/ && $0 !~ />[[:space:]]*"\$DATADIR\/handoff\//) {
+                        print "R11 " f ":" NR ": printf of an argument that is not written into the pending entry: " $0; bad = 1
+                    }
+                }
+                END { if (!seen_begin || !seen_end) { print "R11 " f ": the handoff-capture-begin / handoff-capture-end markers are missing"; bad = 1 } exit bad }
+            ' "$p")" || { printf '%s\n' "$out"; bad=1; }
+        fi
         # R9: the old application's identifier (any file type, minus the allowed places)
         case "$f" in
             docs/reference/*|NOTICE|licenses/*|specs/*|.specify/*|tests/templates/*) ;;
@@ -236,6 +260,29 @@ if [ "${1:-}" = "--self-test" ]; then
     violate scripts/a.sh 'curl --trace-ascii - https://example.org' "R10: curl --trace-ascii"
     printf 'curl -sS --max-time 5 https://example.org\n' > "$tmp/scripts/curl_ok.sh"
     expect pass "R10: curl without tracing is allowed"; rm "$tmp/scripts/curl_ok.sh"
+    # R11: the launcher expands the arguments of a hand-over (a text, maybe a secret) only inside the capture block, and prints them nowhere
+    mkdir -p "$tmp/platform/pocketbook"
+    real_launcher="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/platform/pocketbook/pboffice.app"
+    launcher="$tmp/platform/pocketbook/pboffice.app"
+    variant() {  # variant <pass|fail> <description> <shell snippet that edits $launcher>
+        cp "$real_launcher" "$launcher"
+        eval "$3"
+        expect "$1" "$2"
+        rm -f "$launcher"
+    }
+    variant pass "R11: the real launcher passes" ':'
+    variant pass "R11: \$# and \$0 outside the capture block are allowed" 'printf "\necho \"\$# \$0\"\n" >> "$launcher"'
+    variant fail "R11: echo \"\$1\" outside the capture block" 'printf "\necho \"\$1\"\n" >> "$launcher"'
+    variant fail "R11: \"\$@\" outside the capture block" 'printf "\nfor a in \"\$@\"; do :; done\n" >> "$launcher"'
+    variant fail "R11: \${2} outside the capture block" 'printf "\nx=\${2}\n" >> "$launcher"'
+    variant fail "R11: \$* outside the capture block" 'printf "\nx=\$*\n" >> "$launcher"'
+    variant fail "R11: echo \"\$1\" inside the capture block" 'sed -i "/handoff-capture-begin/a echo \\\"\$1\\\"" "$launcher"'
+    variant fail "R11: logger of the arguments inside the capture block" 'sed -i "/handoff-capture-begin/a logger \\\"\$@\\\"" "$launcher"'
+    variant fail "R11: printf of an argument to the screen inside the capture block" 'sed -i "/handoff-capture-begin/a printf \"%s\\\\n\" \\\"\$2\\\"" "$launcher"'
+    variant fail "R11: eval of an argument inside the capture block" 'sed -i "/handoff-capture-begin/a eval \\\"\$1\\\"" "$launcher"'
+    variant fail "R11: set -x anywhere in the launcher" 'printf "\nset -x\n" >> "$launcher"'
+    variant fail "R11: set -o xtrace anywhere in the launcher" 'printf "\nset -o xtrace\n" >> "$launcher"'
+    variant fail "R11: the capture block is missing" 'sed -i "/handoff-capture-begin/d" "$launcher"'
     violate docs/a.md 'see /home/someone/project/file' "R5: Linux home path"
     violate docs/a.md 'see /Users/someone/project/file' "R5: macOS home path"
     violate docs/a.md 'see C:\Users\x\file' "R5: drive-letter path"

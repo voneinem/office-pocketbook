@@ -4,7 +4,7 @@
 file(GLOB PBO_QML_FILES CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/qml/*.qml ${CMAKE_SOURCE_DIR}/qml/pages/*.qml
     ${CMAKE_SOURCE_DIR}/qml/qmldir ${CMAKE_SOURCE_DIR}/qml/icons/*.svg)
-set(PBO_APP_SOURCES main.cpp device_bridge.cpp)
+set(PBO_APP_SOURCES main.cpp device_bridge.cpp handoff_listener.cpp)
 
 # The device probe has no Qt dependency and builds on every target.
 add_subdirectory(probe)

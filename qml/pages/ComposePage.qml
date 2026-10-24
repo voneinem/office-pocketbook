@@ -6,6 +6,7 @@ import ".."
 // lost; "Send" puts the message into the outbox, and the sync sends it as soon as the reader is online. Discard asks first.
 Item {
     id: page
+    objectName: "composePage"   // the hand-over navigator (HandoffNavigator.qml) finds an open message by this name
 
     property var draftId: 0                // an existing draft to continue, 0 for a new message or a prepared reply (compose.start was called)
     property bool prepared: false          // compose.start() was called by the opener
@@ -92,9 +93,18 @@ Item {
         subjectField.text = compose.subject
         bodyArea.text = compose.body
         page.showCcBcc = compose.cc.length > 0 || compose.bcc.length > 0
+        focusFirstEmpty()
+    }
+    // The cursor goes to the first empty one of recipient, subject, body (a message from a hand-over has the text, and maybe more, already). The StackView
+    // gives the focus to the page it has just pushed (measured in tst_handoff_flow), which takes it from a field set while the page is created: so it is set
+    // again one event-loop turn after the page became the current one (StackView.onActivated), once.
+    property bool focusSet: false
+    function focusFirstEmpty() {
         if (compose.to.length === 0) toField.forceFocus()
+        else if (compose.subject.length === 0) subjectField.forceFocus()
         else { bodyArea.forceActiveFocus(); bodyArea.cursorPosition = 0 }
     }
+    StackView.onActivated: { if (!page.focusSet) { page.focusSet = true; Qt.callLater(page.focusFirstEmpty) } }
     Component.onDestruction: compose.leave()
 
     TopBar {

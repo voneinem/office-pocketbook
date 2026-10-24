@@ -4,6 +4,8 @@ This project is licensed under the MIT License (see LICENSE). The following comp
 patterns are used under their own terms. The build setup, the Qt-free core layout, the SQLite store helpers,
 the TLS/CA handling and the generic QML widgets were taken from the author's own notes-pocketbook
 (MIT, same copyright holder).
+The device probe for the hand-over from other apps (app/probe/pbo_handoff_probe.cpp) adapts the structure of the hand-off probe of the author's own
+nextcloud-pocketbook (MIT, same copyright holder).
 
 --------------------------------------------------------------------------------
 InkFeed (MIT License)

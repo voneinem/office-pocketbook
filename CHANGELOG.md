@@ -3,6 +3,33 @@
 Versions follow MAJOR.MINOR.PATCH. A branch that changes the product raises VERSION and adds an entry here
 (`scripts/check-version-bump.sh`). The tag `v<version>` is set after the merge.
 
+## 0.4.0 - 2026-10-23
+
+Text from other apps (spec 003). Another app on the reader can start PB Office with a text, a subject and one recipient (`docs/handoff-for-app-authors.md`), and PB
+Office opens a new message with them. Everything below is tested on the host; **nothing of it has been tried on a reader yet** (`docs/device-test-checklist.md`
+DT-HO-1 ... DT-HO-9). A test sender and a stand-in app for the experiments are in the package (`INSTALL.md`, "Hand-over probe").
+
+### What it does
+- The text becomes the body of a new draft, the subject and recipient are prefilled and editable. The draft is saved before it is shown, so nothing is lost if the app is
+  killed. **Nothing is sent without your tap.** A message you were writing is saved first and stays as its own draft; two hand-overs are two drafts.
+- A text that is too long (over 8192 bytes), incomplete or not understood is refused with a short notice, never cut short. A subject that is too long, or a recipient that is
+  not one plain address, is left out and you are told; control characters and invalid text are replaced by a visible replacement character; a subject or recipient can add
+  no mail header.
+- Without a mail account the text waits (in memory only) while the account set-up is open and becomes a draft when the account is saved; if you leave the set-up, you are told
+  that it was not kept.
+
+### Privacy
+- The text is never written to a log or shown in a notice. The launcher takes it into a file in `system/pboffice/handoff/` and starts itself again without it, so it is not left
+  in the command line of the running program; the file is removed once the draft exists, or after 10 minutes. The reader's storage cannot be made private: the text waits
+  there for seconds. A new rule of the constitution check (R11) keeps the launcher from printing or logging its arguments.
+
+### Not verified, and a known limit
+- **A hand-over to a PB Office that is already running is not handled yet.** What the system does with a second start of a running app is not known (it may only bring the
+  running copy to the front, and the text then does not arrive); two experiments on the reader decide how it is built (`specs/003-receive-shared-text/research.md` R-05,
+  experiments E1 and E2). Until then a text handed to a running PB Office can be lost, and the sender gets no sign of it. Close PB Office before handing over.
+- The limit of 8192 bytes, the return of the sender when the user leaves PB Office, the timing, and that the text is not visible to other programs after the launcher's restart
+  are all unverified on the reader.
+
 ## 0.3.0 - 2026-10-18
 
 Contacts from the calendar server. Everything below is tested on the host against fake servers (CardDAV included);

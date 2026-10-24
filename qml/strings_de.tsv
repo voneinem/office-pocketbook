@@ -510,3 +510,13 @@ Undo	Rückgängig
 Address books	Adressbücher
 Read-only	Nur lesbar
 A hidden address book is not shown or downloaded. Nothing is deleted: its contacts and any change waiting for the server stay.	Ein ausgeblendetes Adressbuch wird weder angezeigt noch geladen. Es wird nichts gelöscht: Seine Kontakte und jede Änderung, die auf den Server wartet, bleiben erhalten.
+Text from another app	Text aus einer anderen App
+The text was too long to take over. Nothing was created. Hand it over again in a shorter form.	Der Text war zu lang und wurde nicht übernommen. Es wurde nichts angelegt. Bitte übergeben Sie ihn noch einmal in kürzerer Form.
+The text did not arrive completely. Nothing was created. Hand it over again.	Der Text ist nicht vollständig angekommen. Es wurde nichts angelegt. Bitte übergeben Sie ihn noch einmal.
+The hand-over could not be understood. Nothing was created.	Die Übergabe konnte nicht verstanden werden. Es wurde nichts angelegt.
+The subject was too long and was left out.	Der Betreff war zu lang und wurde weggelassen.
+The recipient was not used because it is not a single mail address.	Der Empfänger wurde nicht übernommen, weil er keine einzelne E-Mail-Adresse ist.
+To mail this text, set up a mail account first. The text was not kept; hand it over again afterwards.	Um diesen Text zu mailen, richten Sie zuerst ein E-Mail-Konto ein. Der Text wurde nicht behalten; übergeben Sie ihn danach noch einmal.
+Nothing was handed over. Go back and try again.	Es wurde nichts übergeben. Gehen Sie zurück und versuchen Sie es noch einmal.
+1 more hand-over waits in your drafts.	1 weiterer Text wartet in Ihren Entwürfen.
+%1 more hand-overs wait in your drafts.	%1 weitere Texte warten in Ihren Entwürfen.

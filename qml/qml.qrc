@@ -3,6 +3,8 @@
         <file>Main.qml</file>
         <file>qmldir</file>
         <file>Style.qml</file>
+        <file>DialogState.qml</file>
+        <file>HandoffNavigator.qml</file>
         <file>Icon.qml</file>
         <file>IconButton.qml</file>
         <file>RowDivider.qml</file>

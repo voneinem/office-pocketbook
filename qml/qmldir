@@ -1,4 +1,6 @@
 singleton Style 1.0 Style.qml
+singleton DialogState 1.0 DialogState.qml
+HandoffNavigator 1.0 HandoffNavigator.qml
 ChoiceDialog 1.0 ChoiceDialog.qml
 ConfirmDialog 1.0 ConfirmDialog.qml
 DateTimePicker 1.0 DateTimePicker.qml

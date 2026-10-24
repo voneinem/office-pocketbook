@@ -97,6 +97,24 @@ value) · **F** failed (what happened).
 | DT-CT-6 | Find a contact by typing part of its name and read its number (SC-002) | under 20 s | U | | |
 | DT-CT-7 | Create a contact with a name, a number and an email address using only the on-screen keyboard (SC-003) | under 2 minutes | U | | |
 
+## Receiving shared text (spec 003)
+
+Another app starts PB Office with a text (and optionally a subject and one recipient); PB Office opens a new draft. The host tests prove the rules against the
+real core and bridges; everything about the reader's own behaviour is **unverified** until observed here. Experiments E1 to E8 are described in
+`specs/003-receive-shared-text/research.md`; the test sender and the stand-in app are in the package (`INSTALL.md`, "Hand-over probe"). Use fixed test texts only.
+
+| ID | Item | Expected | State | Date | Value / note |
+|----|------|----------|-------|------|--------------|
+| DT-HO-1 | Cold start: PB Office closed, the test sender hands over boxes A (text, subject, recipient), B (text only), C (1500 bytes, umlauts, line breaks), D (marker only); kill the app after A | A: editor with the text, subject and recipient, cursor in the body; B: cursor in the recipient field; C: the 1500 bytes complete; D: nothing created; the draft survives the kill; Back returns to the sender (US1, SC-003) | U | | |
+| DT-HO-2 | Running instance, E1 (stand-in) and E2 (inside PB Office, `run-listener-probe`): what does the system do for a second start while the app runs: listener called (B1), launcher run again (B2), or only brought forward (B3)? Which flag is needed? In which thread does the listener run, who frees `argv`, is the window in front afterwards, does Qt see the app become active? | recorded in `docs/device-findings.md`; selects the design of research R-05 (tasks T033 to T035) | U | | |
+| DT-HO-3 | The fallback of FR-005 for the selected case; a start with the marker and no payload (contract v2 only) shows "Nothing was handed over" | the text arrives, or the user is told (US2, FR-005, FR-009); the owner's answer to open decision O-1 if the case is B3 | U | | |
+| DT-HO-4 | Size: 1500, 4000, 6000, 8192, 16000, 32000, 65000 bytes (E4): what arrives complete, what is refused, the return value of `OpenBook2` | at least 6000 bytes complete (the spec minimum of 1500 characters); `kHandoffMaxTextBytes` set to the measured limit if it is below 8192 | U | | |
+| DT-HO-5 | After a hand-over to the running app, leave PB Office (E5) | the sender is shown again (US1-5) | U | | |
+| DT-HO-6 | Two hand-overs one second apart (E6) | two drafts, the newest shown, nothing lost or merged (FR-007) | U | | |
+| DT-HO-7 | Hand over while a sync runs, while a dialog is open, while the keyboard is shown, and while a message is half typed (E7) | same folder, same sync state; the half-typed message is a draft, unchanged; no dialog answered (US2, SC-005) | U | | |
+| DT-HO-8 | Privacy (E3): search `/proc/*/cmdline`, `ps`, `/var/run/task`, the system log, `pboffice.log` and `.prev`, `handoff-probe.txt` and `system/pboffice/handoff/` for the marker word of a text, a subject and a recipient | found only in the draft (and in the entry for seconds); the exposure window and whether the system itself keeps the arguments are recorded (SC-004, FR-015, FR-016; a hit anywhere else blocks the release, FR-017) | U | | |
+| DT-HO-9 | Timing and the exit criteria (E8): 20 consecutive hand-overs, 10 with PB Office closed and 10 running in different states | tap to usable editor under 10 s closed and under 3 s running (SC-001); 20 of 20 show the complete text or tell the user that nothing arrived (SC-002); ordinary cold start still under 5 s (SC-007) | U | | |
+
 ## Recording
 
 For each measured value write the build version (About) and the date. Findings that change a design decision
