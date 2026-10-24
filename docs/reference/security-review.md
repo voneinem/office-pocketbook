@@ -128,3 +128,26 @@ Residual points: (a) vCards of real clients differ; the in-house parser is teste
 from memory of other clients, all `.unverified`. (b) A server that ignores `If-Match` on a `PUT` or `DELETE` could overwrite a
 change made between the look and the write; the app cannot detect that (LV-K8). (c) A card kept for "keep both" loses the
 properties the reader never held (photo, birthday): the server's own card, which is kept, still has them.
+
+## 9. Hand-over from another app (feature 003-receive-shared-text)
+
+Another app starts PB Office with a text, a subject and one recipient. Everything is untrusted input and may hold a secret (a share link). The host tests use the real
+core and bridges; the reader's own behaviour (how the system delivers the arguments, what stays visible to other programs and for how long) is **unverified** until the rows
+DT-HO-1 to DT-HO-9 of `docs/device-test-checklist.md` are done.
+
+| Requirement | Evidence |
+|-------------|----------|
+| The text, subject and recipient are bounded and cleaned before anything is made of them: invalid UTF-8 and control characters become U+FFFD, line ends become a line feed, the subject is one line, the recipient is exactly one plain address | `test_handoff_parse` (every limit, 8192/8193 bytes, 300/301 characters, 254/255 bytes, the control and C1 ranges, overlong and surrogate forms, a megabyte, ten thousand arguments) |
+| A cut or changed text is never taken for a complete one | `test_handoff_parse` (`textlen` missing, shorter, longer, not a number, overflow); the notice `incomplete` (`tst_handoff_flow`) |
+| A subject or recipient can add no header: no hidden second recipient, no hidden blind copy | `test_handoff_header_injection` (the real path: parse, store, build the outgoing message; one `To`, no `Bcc` or `Cc`, one `Subject`, the same header names as an ordinary message, the envelope holds only the typed address; the builder also refuses a hostile address if one ever reached a draft) |
+| The text is never run, expanded or interpreted: the launcher writes each argument with `printf '%s'` into a file of its own | `tests/launcher/test_handoff_launcher.sh` (`$(...)`, backticks, `;`, `&&`, glob characters, `$1`, `-n`, quotes, a newline, umlauts, 1500 and 8192 bytes: the file holds the bytes, no command ran) |
+| The text is not left in the command line of the long-lived launcher: it executes itself again without arguments | `test_handoff_launcher.sh` (the app is started once with no arguments; no process of the host holds the text while the app runs; the log and the log before it hold none; the only files holding it are those of the pending entry). The few milliseconds between the system's start of the launcher and its `exec` are **unverified** on the reader (DT-HO-8) |
+| The launcher never prints, logs or evals the arguments, and never traces | rule R11 of `scripts/check-constitution.sh` (arguments only inside the capture block; no `echo`, `logger`, `eval`, `set -x`; 12 self-test cases in `check_constitution_selftest`) |
+| Logs hold counts and codes only | `test_handoff_bridge` (`no_log_line_and_no_notice_holds_the_text_...`: no 8-character part of a value in any log line or notice, also after a store error; `only_the_four_codes_...`); codes `handoff.received`, `.drafted`, `.refused`, `.expired` in `core/src/log_codes.h`; the key `fields` is a bit mask because rule R8 refuses keys ending in `recipient`, `subject` and similar words |
+| A notice never repeats a value | `tst_handoff_flow` (`test_no_notice_shows_a_value_of_the_handoff`) |
+| The pending entry lives seconds, is removed after the draft exists, expires after 10 minutes, and is read without following links | `test_handoff_inbox` (expiry at 600 s, unfinished `.tmp` entries removed too, symbolic links not followed, `remove` refuses ids that leave the folder), `test_handoff_bridge` (entry removed after the draft; a failing store keeps it). The card is vfat: the entry cannot be made private there, and flash cannot be shredded; the README and INSTALL say so |
+| Nothing is lost: the draft is saved before any screen; an open message is saved first; a crash between draft and removal makes a second draft, never none; no text is cut silently | `test_handoff_bridge`, `tst_handoff_flow` (`test_a_message_being_typed_is_saved_first_...`) |
+| A hand-over sends nothing, starts no sync, switches no Wi-Fi on | `test_handoff_bridge` (no outbox row), `test_idle_no_network` (no connection, no Wi-Fi request), `tst_handoff_flow` (`test_a_handoff_during_a_sync_does_not_touch_it`) |
+| Without a mail account the text waits in memory only and is discarded with a notice when the set-up is left | `test_handoff_bridge` (the data folder holds no copy), `tst_handoff_flow` |
+| Any app may hand over text; PB Office cannot tell who | by design (spec 003 Clarifications): the only effect is a draft the user must send |
+

@@ -14,6 +14,35 @@
 
 APPDIR=/mnt/ext1/applications
 DATADIR=/mnt/ext1/system/pboffice
+
+# Hand-over from another app (spec 003, contracts/handoff-contract.md): the system starts this script with the marker pbo-mail-v1 and the text, subject and
+# recipient as arguments. A shell cannot overwrite its own command line, and this script lives as long as the app, so the arguments are written to a private
+# pending entry (system/pboffice/handoff/<id>/, one raw file per argument, renamed when complete; the app reads it, saves a draft and removes it, and an entry
+# older than 10 minutes is removed unread) and the script then executes itself again WITHOUT arguments: the text is not in the command line of the long-lived
+# process. The card is vfat, so the entry cannot be made private there; it waits for seconds. Nothing in the arguments is ever printed, logged, evaluated or
+# expanded anywhere else in this script (scripts/check-constitution.sh rule R11).
+# handoff-capture-begin
+if [ "$#" -gt 0 ]; then
+    if [ "$1" = "pbo-mail-v1" ]; then
+        (
+            umask 077
+            id="$(date +%s 2>/dev/null || echo 0)-$$"
+            mkdir -p "$DATADIR/handoff/$id.tmp" 2>/dev/null || exit 0
+            n=0
+            first=1
+            for a in "$@"; do
+                if [ "$first" = 1 ]; then first=0; continue; fi
+                [ "$n" -ge 8 ] && break
+                printf '%s' "$a" > "$DATADIR/handoff/$id.tmp/$n"
+                n=$((n + 1))
+            done
+            mv "$DATADIR/handoff/$id.tmp" "$DATADIR/handoff/$id" 2>/dev/null
+        )
+    fi
+    exec sh "$0"
+fi
+# handoff-capture-end
+
 mkdir -p "$DATADIR"
 # Keep the log of the launch before this one: a start that fails must not erase the evidence of the one before it.
 [ -f "$DATADIR/pboffice.log" ] && mv -f "$DATADIR/pboffice.log" "$DATADIR/pboffice.log.prev" 2>/dev/null
@@ -44,6 +73,25 @@ if [ -e "$DATADIR/run-probe" ]; then
     sh "$APPDIR/pboffice-probe.sh" "$APPDIR/pbo-probe.bin" "$DATADIR" > "$DATADIR/probe.txt" 2>&1
     echo "=== pboffice: probe finished, output in probe.txt ==="
     exit 0
+fi
+
+# Hand-over probe (INSTALL.md, "Hand-over probe"; spec 003): when the file run-handoff-probe exists in the data folder, this start runs the small InkView
+# program that starts PB Office (or its stand-in) from another app with a text, instead of the app, once. It writes handoff-probe.txt there and no text.
+if [ -e "$DATADIR/run-handoff-probe" ]; then
+    rm -f "$DATADIR/run-handoff-probe"
+    echo "=== pboffice: run-handoff-probe flag found, running the hand-over probe instead of the app ==="
+    exec "$APPDIR/pbo-handoff-probe.bin" "$DATADIR"
+fi
+
+# Listener probe (experiment E2 of spec 003): when the file run-listener-probe exists in the data folder, this start runs the APP itself, with PBO_HANDOFF_PROBE=1,
+# so that it registers a request listener that only records what a second start by another app delivers (counts and lengths, never the text) in
+# listener-probe.txt. A file content of "free" also sets PBO_HANDOFF_PROBE_FREE=1 (the probe then frees what UnpackParameters returned). The flag is consumed.
+if [ -e "$DATADIR/run-listener-probe" ]; then
+    if grep -qx free "$DATADIR/run-listener-probe" 2>/dev/null; then PBO_HANDOFF_PROBE_FREE=1; export PBO_HANDOFF_PROBE_FREE; fi
+    rm -f "$DATADIR/run-listener-probe"
+    PBO_HANDOFF_PROBE=1
+    export PBO_HANDOFF_PROBE
+    echo "=== pboffice: run-listener-probe flag found, the app registers the probe listener ==="
 fi
 
 # The log is a file, so the app's own stdout is block-buffered and lost when the process aborts; line buffering

@@ -107,6 +107,29 @@ on a computer on the same Wi-Fi: `build-host/tests/pbo_fake_imap --listen 0.0.0.
 start the probe as above (with the reader on Wi-Fi); `probe.txt` gets a section "imap self-test" with one pass/fail line
 per check. The demo server holds no real mail; never use these flags against a real account.
 
+## Hand-over probe
+
+Another app can start PB Office with a text, a subject and a recipient, and PB Office opens a new message with them (`docs/handoff-for-app-authors.md`).
+The package can contain `pbo-handoff-probe.bin` and the stand-in `pbo-handoff-target.app` in `applications/`, which let you try that, and the experiments
+of `specs/003-receive-shared-text/research.md`, without another app. They use fixed test texts with the marker word `HANDOFF-PROBE-7f3a9c`, have no
+network, and write only return values, events, counts and lengths (never a text) to `system/pboffice/handoff-probe.txt`.
+
+1. Create an empty file named `run-handoff-probe` in `system/pboffice/` on the reader's storage.
+2. Eject the reader safely and start **PB Office** once. Instead of the app, the probe's screen appears with boxes: the target (PB Office or the
+   stand-in), the flags of the call, and the texts A to F. The file is removed, so the next start is a normal one. Tap one box per start: a
+   successful hand-over may close the probe.
+3. PB Office opens a new message with the text (box A: also the subject `HANDOFF-PROBE-7f3a9c-subject` and the recipient `probe@example.org`).
+   Nothing is sent. To remove the test drafts, delete them in the Drafts list.
+4. Connect the reader again and read `system/pboffice/handoff-probe.txt`.
+
+Two more flags belong to the experiments about an app that is **already running** (`specs/003-receive-shared-text/research.md`, E1 and E2): the stand-in
+`pbo-handoff-target.app` is started from the sender's box "Target: stand-in", left open, and started again; and an empty file `run-listener-probe` in
+`system/pboffice/` makes the next normal start of PB Office record, in `listener-probe.txt`, what a second start by another app delivers (counts and lengths
+only). Put the word `free` in that file to let the probe free what the system returned (it may crash: that is the answer).
+
+The text waits for a moment in the folder `system/pboffice/handoff/` (the launcher writes it, PB Office reads it, saves the draft and removes it; a
+leftover is removed after 10 minutes). The reader's storage cannot be made private, so do not hand over anything that you would not want to leave on it.
+
 ## After installing: what has been checked
 
 The tests of this project use fake servers and the host. Work through `docs/device-test-checklist.md` on

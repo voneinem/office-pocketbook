@@ -41,10 +41,12 @@
 #include "timezone_bridge.h"
 #include "device_bridge.h"
 #include "folder_model.h"
+#include "handoff_bridge.h"
 #include "mail_image_provider.h"
 #include "message_list_model.h"
 #include "pbo/ca_selector.h"
 #include "pbo/log.h"
+#include "handoff_listener.h"
 #include "pbo/store.h"
 #include "pbo/tz.h"
 #include "pbo/version.h"
@@ -148,6 +150,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<ComposeBridge> composeBridge;
     std::unique_ptr<OutboxModel> outboxModel;
     std::unique_ptr<DraftsModel> draftsModel;
+    std::unique_ptr<HandoffBridge> handoffBridge;   // a text handed over by another app becomes a draft (spec 003)
     if (store) {
         // The time zone data (IANA, compact TZif files) comes with the app, never from the device: the same event shows the same time everywhere.
 #ifdef PLATFORM_POCKETBOOK
@@ -272,6 +275,12 @@ int main(int argc, char** argv) {
         composeBridge = std::make_unique<ComposeBridge>(cc);
         outboxModel = std::make_unique<OutboxModel>(OutboxModel::Config{store.get()});
         draftsModel = std::make_unique<DraftsModel>(DraftsModel::Config{store.get()});
+        HandoffBridge::Config hoc;
+        hoc.store = store.get();
+        hoc.clock = &clock;
+        hoc.random = &random;
+        hoc.handoff_dir = data + "/handoff";   // the pending entries of the launcher (platform/pocketbook/pboffice.app)
+        handoffBridge = std::make_unique<HandoffBridge>(hoc);
     }
 
     DeviceBridge device;
@@ -349,6 +358,7 @@ int main(int argc, char** argv) {
         engine.rootContext()->setContextProperty(QStringLiteral("compose"), composeBridge.get());
         engine.rootContext()->setContextProperty(QStringLiteral("outbox"), outboxModel.get());
         engine.rootContext()->setContextProperty(QStringLiteral("draftList"), draftsModel.get());
+        engine.rootContext()->setContextProperty(QStringLiteral("handoff"), handoffBridge.get());
     }
     engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));
     if (engine.rootObjects().isEmpty()) {
@@ -356,6 +366,12 @@ int main(int argc, char** argv) {
         return 1;
     }
     if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first())) device.setWindow(window);
+#ifdef PLATFORM_POCKETBOOK
+    // Experiment E2 (spec 003): a run-listener-probe flag makes the launcher set PBO_HANDOFF_PROBE; the app then only records what a second start delivers.
+    if (qEnvironmentVariableIsSet("PBO_HANDOFF_PROBE")) startListenerProbe(data, qEnvironmentVariableIsSet("PBO_HANDOFF_PROBE_FREE"));
+#endif
+    // The pending entries of a hand-over written by the launcher (or left by the last start): read once the QML is connected, i.e. when the event loop runs.
+    if (handoffBridge && !self_test) QMetaObject::invokeMethod(handoffBridge.get(), &HandoffBridge::checkInbox, Qt::QueuedConnection);
 
     if (self_test) {  // CTest: every page compiles and instantiates without QML errors
         QTimer::singleShot(300, &app, [&]() {

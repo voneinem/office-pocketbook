@@ -56,6 +56,12 @@ is a separate app: it has its own binary, launcher and data folder and never tou
 - Photos are not stored on the reader and are left untouched on the server; properties the app does not show
   (birthday, links, groups) are kept when you change a contact.
 
+**Text from other apps**
+- Another app can hand a text (and a subject and one recipient) to PB Office, for example "mail this link" from a file app; PB Office opens a new message with it, saved
+  as a draft first. Nothing is sent without your tap, the text is never logged, and a text that is too long or incomplete is refused with a notice, never cut short.
+  The interface is in [`docs/handoff-for-app-authors.md`](docs/handoff-for-app-authors.md). **Verified on the host only**: that it works while PB Office is already
+  running, and what the system keeps of the text, are still to be tested on the reader (`docs/device-test-checklist.md`, DT-HO-1 to DT-HO-9).
+
 **Syncing**
 - A sync at app start (only when Wi-Fi is already connected), the Sync button, and an automatic sync a few seconds
   after your own changes (this switches Wi-Fi on).
@@ -99,6 +105,9 @@ reader and register the app in the Applications menu. The full steps are in [`IN
 - Contacts live in the database on the reader and nowhere else; no photos are stored, and nothing is sent except to the
   server you configured. The first start of this version upgrades the database to a new format (one way): a copy is
   kept until the next start, and an older build refuses the new file.
+- A text handed over by another app waits for a few seconds as a file in `system/pboffice/handoff/` until PB Office has saved it as a draft (the reader's storage
+  cannot be made private, and deleted files are not wiped); a file nobody read is removed after 10 minutes. The text is not logged and is not left in the command
+  line of a running program (the launcher starts itself again without it).
 - The app opens no link and loads no remote content unless you tap "Load pictures" on one mail (one plain GET per
   picture over https, without cookies or referrer; the sender learns that the mail was read).
 - It connects only to the servers you configure.
@@ -167,6 +176,7 @@ marked LIVE and DEVICE) and in `specs/001-email-calendar-mvp/research.md` ("Open
 ## Documentation
 
 - [`INSTALL.md`](INSTALL.md): installing on the reader
+- [`docs/handoff-for-app-authors.md`](docs/handoff-for-app-authors.md): handing a text to PB Office from another app
 - [`CHANGELOG.md`](CHANGELOG.md): release notes
 - [`specs/001-email-calendar-mvp/`](specs/001-email-calendar-mvp/): specification, plan, research, contracts, tasks
 - [`.specify/memory/constitution.md`](.specify/memory/constitution.md): the project rules

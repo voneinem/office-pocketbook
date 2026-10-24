@@ -12,6 +12,8 @@ target_link_libraries(pbo_sqlite PUBLIC pthread m)
 
 set(PBO_CORE_SOURCES
     src/version.cpp
+    src/handoff.cpp
+    src/handoff_inbox.cpp
     src/types.cpp
     src/curl_session.cpp
     src/store.cpp

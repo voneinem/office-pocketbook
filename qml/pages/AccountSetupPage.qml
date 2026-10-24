@@ -7,6 +7,7 @@ import ".."
 // the server entered here, and only over a verified encrypted connection.
 Item {
     id: page
+    objectName: "accountSetupPage"
 
     // "" = nothing tested yet; "ok" or a cause key (auth_failed, cert_expired, ...) after a test; "invalid_input"
     // when a field was rejected (errorField then names it); "saved" after a successful save.
@@ -120,7 +121,16 @@ Item {
         }
     }
 
+    // A text handed over by another app while no mail account exists waits here (in memory only) and becomes a draft once the account is saved; when this
+    // page goes without an account the user is told that the text was not kept (spec 003 FR-008).
+    Component.onDestruction: {
+        if (typeof handoff === "undefined") return
+        handoff.setupActive(false)
+        handoff.setupLeft()
+    }
+
     Component.onCompleted: {
+        if (typeof handoff !== "undefined") handoff.setupActive(true)
         var f = account.mailForm()
         if (f.imapHost !== undefined) {
             imapHost.text = f.imapHost

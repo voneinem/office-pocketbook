@@ -12,6 +12,7 @@ iCalendar and CalDAV XML. They MUST be anonymized (constitution Principle IV) be
 | `mail/` | `.eml` messages (arrives with the MIME tasks) |
 | `malformed/` | hostile or broken inputs for the "never crash" tests |
 | `carddav/` | CardDAV XML answers of a contact server (spec 002), `.unverified` until recorded from a real server |
+| `handoff/` | texts, subjects and recipients handed to the app by another app (spec 003): umlauts, euro, emoji, control characters, invalid UTF-8, header-injection attempts; plain files, anonymized; a file that imitates the arguments the system delivers would carry `.unverified` |
 | `vcard/` | vCards of several client styles (spec 002), `.unverified`; `vcard/corpus/` holds the generated set used by the edit round-trip tests |
 
 ## Anonymization procedure

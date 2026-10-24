@@ -44,6 +44,9 @@ ApplicationWindow {
             replaceExit: Transition {}
         }
 
+        // A text handed over by another app: the bridge saved the draft, the navigator opens it (spec 003)
+        HandoffNavigator { nav: nav }
+
         // A change the user made on the reader asks for a sync (SyncBridge.noteChange); when the reader is offline the bridge asks for Wi-Fi first
         Connections {
             target: typeof sync !== "undefined" ? sync : null     // there is no sync object when the storage could not be opened

@@ -17,6 +17,9 @@ Item {
     visible: false
     z: 1000
 
+    onVisibleChanged: DialogState.open += visible ? 1 : -1   // a hand-over from another app waits while a dialog is open
+    Component.onDestruction: if (visible) DialogState.open -= 1
+
     function open() { visible = true }
     function close() { visible = false }
 

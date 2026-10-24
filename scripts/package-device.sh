@@ -3,7 +3,7 @@
 # Assemble the InkPad One install bundle from a freshly built ARM binary.
 # Adapted from InkFeed's packaging script (MIT, see NOTICE).
 #
-#   scripts/package-device.sh <built-arm-elf> [version] [out-dir] [built-arm-pbo-probe]
+#   scripts/package-device.sh <built-arm-elf> [version] [out-dir] [built-arm-pbo-probe] [built-arm-pbo-handoff-probe]
 #   scripts/package-device.sh --check-size <zip> [limit-bytes]   fail when the zip is larger than the budget (25 MB, research R-19)
 #   scripts/package-device.sh --self-test                        prove that the size check works
 #
@@ -14,6 +14,7 @@
 #   applications/pboffice.app           the launcher (shell script)
 #   applications/pbo-probe.bin          the device probe (only when the 4th argument is given)
 #   applications/pboffice-probe.sh      the probe script the launcher runs when run-probe exists (INSTALL.md)
+#   applications/pbo-handoff-probe.bin, pbo-handoff-target.app   the hand-over probe: a test sender and a stand-in app (only when the 5th argument is given; INSTALL.md)
 #   applications/pboffice-cacert.pem    bundled CA certificates (used when the device has none)
 #   applications/pboffice-zoneinfo/     IANA time zone data (compact TZif files) and its VERSION file, for the calendar
 #   applications/pboffice-plugins/imageformats/   the Qt JPEG and GIF image plugins of the SDK (pictures of mails; a copy the app falls back on when the
@@ -68,6 +69,7 @@ VERSION="${2:-$(head -n 1 "$ROOT/VERSION" 2>/dev/null | tr -d '[:space:]')}"
 [ -n "$VERSION" ] || { echo "no version: pass one or create $ROOT/VERSION" >&2; exit 1; }
 OUT_DIR="${3:-dist}"
 PROBE_BIN="${4:-}"
+HANDOFF_BIN="${5:-}"
 
 for f in "$BIN" \
          "$ROOT/platform/pocketbook/pboffice.app" \
@@ -108,6 +110,12 @@ install -m 777 "$ROOT/scripts/probe-device.sh"          "$apps/pboffice-probe.sh
 if [ -n "$PROBE_BIN" ]; then
     [ -f "$PROBE_BIN" ] || { echo "missing input: $PROBE_BIN" >&2; exit 1; }
     install -m 777 "$PROBE_BIN"                         "$apps/pbo-probe.bin"
+fi
+if [ -n "$HANDOFF_BIN" ]; then
+    [ -f "$HANDOFF_BIN" ] || { echo "missing input: $HANDOFF_BIN" >&2; exit 1; }
+    [ -f "$ROOT/platform/pocketbook/pbo-handoff-target.app" ] || { echo "missing input: platform/pocketbook/pbo-handoff-target.app" >&2; exit 1; }
+    install -m 777 "$HANDOFF_BIN"                       "$apps/pbo-handoff-probe.bin"
+    install -m 777 "$ROOT/platform/pocketbook/pbo-handoff-target.app" "$apps/pbo-handoff-target.app"
 fi
 install -m 644 "$ROOT/third_party/cacert/cacert.pem"    "$apps/pboffice-cacert.pem"
 [ -d "$ROOT/third_party/tzdata/zoneinfo" ] || { echo "missing input: third_party/tzdata/zoneinfo (run scripts/update-tzdata.sh)" >&2; exit 1; }

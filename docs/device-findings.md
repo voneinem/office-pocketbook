@@ -178,3 +178,30 @@ libqvnc.so
 QueryNetwork() (R-11) cannot be called from a shell: it is read by the app and logged as network.connect.
 The IMAP behaviour check against a server is a separate step (pbo-probe --imap-selftest, not part of this output).
 ```
+
+## 2026-10-23 - starting PB Office from another app (spec 003): what is known and what is not
+
+Nothing in this section was observed with PB Office on the reader yet; the experiments E1 to E8 of `specs/003-receive-shared-text/research.md` fill it in
+(rows DT-HO-1 to DT-HO-9 of `docs/device-test-checklist.md`).
+
+**Observed 2026-10-23 on the InkPad One by the sibling project `nextcloud-pocketbook`** (its hand-off probe and a stand-in script as the target, **not PB Office**;
+`docs/device-findings.md` of that project, "Starting one app from another with text"):
+- `OpenBook(<path of an .app>, "<text>", 0)` and `OpenBook2(<path>, argc, argv, 0)` start the file; each argument arrives unchanged (spaces, quotes, non-ASCII letters,
+  the euro sign, a line break), tested up to 1500 bytes; the call returns 0 at once; the target starts within about a second.
+- The calling app keeps running; it gets EVT_BACKGROUND (152) and, after the target ended, EVT_FOREGROUND (151).
+- The system's own log lines about the call name only the path of the started app.
+
+**Read from the SDK 6.11 (not observed):** `libinkview.so` contains the strings `hw_task_findbyappname`, `sendParametersToTaskNoWait: REQ_OPENBOOK2` and
+`SendRequestTo: REQ_OPENBOOK2` inside `iv_OpenBook`; `inkview.h` has `SetRequestListener`, `UnpackParameters`, `SetActiveTask`, `OB_NONEWTASK`, `OB_WITHRETURN` and
+`TASK_SINGLEINSTANCE`. This suggests that a second start of a running app is turned into a request to that app (case B1 of research R-01), but it is a reading
+of strings.
+
+**Unmeasured:** the behaviour with PB Office already running (B1 listener, B2 the launcher runs again, B3 the arguments are dropped); the thread of a request listener
+and the owner of the `argv` that `UnpackParameters` returns; whether Qt sees the app become active when it is brought forward; the size limit above 1500 bytes; what
+`OB_NONEWTASK` and `OB_WITHRETURN` change; whether the system keeps the arguments somewhere readable (`/var/run/task`, the system log); the time between the system
+starting the launcher and the launcher's `exec`, during which the text is in a process list.
+
+**Measured on the host, not on the reader (QML offscreen, `tests/qml/tst_handoff_flow.qml`):** a `StackView` gives the keyboard focus to the page it has just pushed, which
+takes it from a text field that was focused while the page was created; the compose page therefore sets the cursor again one event-loop turn after it became the
+current page (`StackView.onActivated`). Whether the reader's keyboard appeared for the recipient field of a new message in earlier builds is not recorded.
+

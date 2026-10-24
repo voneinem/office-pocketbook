@@ -7,6 +7,7 @@
 #include "contact_bridge.h"
 #include "contact_env.h"
 #include "contacts_model.h"
+#include "handoff_bridge.h"
 #include "mail_env.h"
 #include "sync_bridge.h"
 #include "worker.h"
@@ -103,6 +104,38 @@ PB_TEST(open_contact_pages_make_no_request_and_a_change_waits_for_the_sync_when_
     QTest::qWait(1200);                                // the app stays open and idle
     PB_CHECK_EQ(e.server->log().size(), requests);
     PB_CHECK_EQ(e.store->pending_contacts().size(), size_t(1));
+}
+
+// spec 003 FR-004 / FR-018: a text handed over by another app makes a draft and nothing else: no connection, no request for Wi-Fi, no sync.
+PB_TEST(a_handoff_opens_no_connection_and_asks_for_no_wifi_while_the_app_stays_idle) {
+    pbtest::MailEnv e;
+    e.add();
+    e.sync();
+    pbo::Credentials creds;
+    creds.mail_password = "pw-for-tests";
+    pbo::save_credentials(e.dir.path(), creds);
+    Worker worker;
+    SyncBridge sync(bridge_config(e, worker, 50));
+    QSignalSpy finished(&sync, &SyncBridge::syncFinished);
+    QSignalSpy wifi(&sync, &SyncBridge::connectRequested);
+    struct Rng : pbo::Random {
+        uint8_t n = 0;
+        void bytes(uint8_t* out, size_t len) override { for (size_t i = 0; i < len; ++i) out[i] = n++; }
+    } rng;
+    HandoffBridge::Config hc;
+    hc.store = e.store.get();
+    hc.clock = &e.clock;
+    hc.random = &rng;
+    hc.handoff_dir = e.dir.path() + "/handoff";
+    HandoffBridge handoff(hc);
+    const int connections = e.imap->connections();
+    handoff.deliver({"pbo-mail-v1", "text=hello", "textlen=5", "subject=Plan", "to=bob@example.org"}, "listener");
+    QTest::qWait(1500);                          // the app stays open and idle
+    PB_CHECK_EQ(e.store->drafts().size(), size_t(1));
+    PB_CHECK_EQ(e.imap->connections(), connections);
+    PB_CHECK_EQ(wifi.count(), 0);
+    PB_CHECK_EQ(finished.count(), 0);
+    PB_CHECK_EQ(e.store->debug_query("SELECT count(*) FROM outbox"), std::string("0"));
 }
 
 PB_TEST_MAIN()
