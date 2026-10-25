@@ -205,3 +205,9 @@ starting the launcher and the launcher's `exec`, during which the text is in a p
 takes it from a text field that was focused while the page was created; the compose page therefore sets the cursor again one event-loop turn after it became the
 current page (`StackView.onActivated`). Whether the reader's keyboard appeared for the recipient field of a new message in earlier builds is not recorded.
 
+## 2026-10-25 - firmware of the test reader (spec 004, T033)
+
+The owner confirmed that the InkPad One used for all tests runs firmware **6.11.1437** (the candidate from the store repository's note and PB Notes' manifest; confirmed
+by the owner's answer in the session, not read from the reader by the agent). PB Office has been tried on this firmware only; nothing is claimed for older or newer
+firmware. This value is `min_firmware` in `packaging/manifest.template.json`. Whether the earlier tests (0.1.0 on 2026-10-14 ... ) ran on the same firmware is not recorded.
+

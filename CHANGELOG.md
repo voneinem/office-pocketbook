@@ -3,6 +3,28 @@
 Versions follow MAJOR.MINOR.PATCH. A branch that changes the product raises VERSION and adds an entry here
 (`scripts/check-version-bump.sh`). The tag `v<version>` is set after the merge.
 
+## 0.4.1 - 2026-10-25
+
+The release package follows the PB Store package contract (spec 004), so the PB Store can list PB Office. The app is the 0.4.0 app apart from its version string;
+nothing of it changed, and the unverified items of 0.4.0 (the hand-over, `docs/device-test-checklist.md` DT-HO-1 ... DT-HO-9) are still unverified.
+
+### What changed in the package
+- `manifest.json` at the top of the zip, made at build time from `packaging/manifest.template.json` and the `VERSION` file. The zip holds `manifest.json` and the `applications/` folder and
+  nothing else; `INSTALL.md` is no longer inside it (it is in the repository and linked from each release).
+- The zip is written by `pbstore-catalog pack` (appstore-pocketbook, **tag v0.1.4 or newer**: older tools reject the `+` in the names of the time zone files), packed twice and compared, then checked with
+  `pbstore-catalog check-package` and the size budget. `scripts/package-device.sh` finds the tool through `PBSTORE_CATALOG` or `PATH` and stops with a message when it is missing.
+- `scripts/check-release.sh` checks that the tag, `VERSION`, the zip name and the manifest version agree. Tagging and publishing stay a deliberate step (README, "Building from source").
+- Unchanged: the zip name `pboffice-inkpad-one-<version>.zip` and every file under `applications/` (622 files; `diff -r` against the 0.4.0 zip of 2026-10-23: no difference).
+
+### Verified on the host (2026-10-25, `pbstore-catalog` 0.1.4)
+- `pbstore-catalog check-package` on `pboffice-inkpad-one-0.4.1.zip` (4,660,878 bytes, sha256 `19b52cd00fd191112692cd6e9305fb994626d229ab3c381dab3ba786132e6012`): `package ok`. The same check on the 0.4.0 zip of the old layout reported exactly E-PKG-04 and E-PKG-05.
+- Two separate builds gave identical zips; the zip root holds only `manifest.json` and `applications/`; the manifest lists 622 files; `scripts/check-release.sh` passes for `v0.4.1`.
+- Without the tool, `scripts/package-device.sh` stops at once, names the tool, the variable and `PATH`, and leaves no zip.
+
+### Not verified
+- `min_firmware` in the manifest is `6.11.1437`, the firmware of the owner's reader (confirmed by the owner on 2026-10-25, `docs/device-findings.md`). Nothing is claimed for other firmware.
+- The manual install from the new zip on the reader, what the PB Store's installer does with the package on a reader, and the published release have not been tried.
+
 ## 0.4.0 - 2026-10-23
 
 Text from other apps (spec 003). Another app on the reader can start PB Office with a text, a subject and one recipient (`docs/handoff-for-app-authors.md`), and PB

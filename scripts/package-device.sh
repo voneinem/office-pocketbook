@@ -7,9 +7,11 @@
 #   scripts/package-device.sh --check-size <zip> [limit-bytes]   fail when the zip is larger than the budget (25 MB, research R-19)
 #   scripts/package-device.sh --self-test                        prove that the size check works
 #
-# Produces <out-dir>/pboffice-inkpad-one-<version>.zip, laid out so the user can unzip it
-# straight onto the reader's ext1 partition:
+# Produces <out-dir>/pboffice-inkpad-one-<version>.zip, laid out as the PB Store package contract asks
+# (appstore-pocketbook): manifest.json and the applications/ tree at the top level, nothing else. A user can
+# unzip it straight onto the reader's ext1 partition (copy applications/):
 #
+#   manifest.json                      created at build time from packaging/manifest.template.json
 #   applications/pboffice.bin           the app (ARM ELF)
 #   applications/pboffice.app           the launcher (shell script)
 #   applications/pbo-probe.bin          the device probe (only when the 4th argument is given)
@@ -24,7 +26,13 @@
 #   applications/pboffice-licenses/     license texts for the About screens: licenses/manifest.txt and every
 #                                      file the manifest names, at the same relative path as in the repository
 #   applications/icons/*.bmp           launcher icons
-#   INSTALL.md                         install / registration steps
+#
+# The install / registration steps (INSTALL.md) are not part of the package; they live in the repository.
+# The zip is written by `pbstore-catalog pack`, which adds the file list to the manifest. The tool comes from
+# the appstore-pocketbook repository (tag v0.1.4 or newer); it is found through the environment variable
+# PBSTORE_CATALOG (the tool's path) or else on PATH, and a missing tool stops the build before any work. The
+# package is packed twice and the two results must be identical, then it is checked with
+# `pbstore-catalog check-package` and against the size budget; only a package that passes is put into <out-dir>.
 #
 # The version defaults to the contents of the VERSION file, the same source CMakeLists.txt uses for the
 # version compiled into the app. The script fails when the binary does not contain that version string,
@@ -65,8 +73,23 @@ fi
 
 BIN="${1:?usage: package-device.sh <built-arm-elf> [version] [out-dir]}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# The store's tool: PBSTORE_CATALOG if set, else PATH. Looked up first so a missing tool is reported before any work.
+if [ -n "${PBSTORE_CATALOG:-}" ]; then
+    [ -f "$PBSTORE_CATALOG" ] && [ -x "$PBSTORE_CATALOG" ] || {
+        echo "PBSTORE_CATALOG is set but is not an executable file: $PBSTORE_CATALOG" >&2; exit 1; }
+    PBSTORE="$PBSTORE_CATALOG"
+else
+    PBSTORE="$(command -v pbstore-catalog || true)"
+    [ -n "$PBSTORE" ] || {
+        echo "pbstore-catalog not found (PBSTORE_CATALOG is not set; searched PATH)." \
+             "Put it on PATH or set PBSTORE_CATALOG to the tool (build it from the appstore-pocketbook repository, tag v0.1.4 or newer)." >&2
+        exit 1; }
+fi
+
 VERSION="${2:-$(head -n 1 "$ROOT/VERSION" 2>/dev/null | tr -d '[:space:]')}"
 [ -n "$VERSION" ] || { echo "no version: pass one or create $ROOT/VERSION" >&2; exit 1; }
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version is not MAJOR.MINOR.PATCH: $VERSION" >&2; exit 1; }
 OUT_DIR="${3:-dist}"
 PROBE_BIN="${4:-}"
 HANDOFF_BIN="${5:-}"
@@ -76,7 +99,7 @@ for f in "$BIN" \
          "$ROOT/third_party/cacert/cacert.pem" "$ROOT/third_party/tzdata/VERSION" \
          "$ROOT/third_party/noto-emoji/NotoEmoji.ttf" "$ROOT/third_party/noto-emoji/OFL.txt" \
          "$ROOT/res/icons/pboffice.bmp" "$ROOT/res/icons/pboffice_f.bmp" \
-         "$ROOT/INSTALL.md"; do
+         "$ROOT/packaging/manifest.template.json"; do
     [ -f "$f" ] || { echo "missing input: $f" >&2; exit 1; }
 done
 
@@ -100,7 +123,8 @@ OUT_DIR="$(mkdir -p "$OUT_DIR" && cd "$OUT_DIR" && pwd)"
 ZIP="$OUT_DIR/pboffice-inkpad-one-$VERSION.zip"
 
 stage="$(mktemp -d)"
-trap 'rm -rf "$stage"' EXIT
+work="$(mktemp -d)"
+trap 'rm -rf "$stage" "$work"' EXIT
 apps="$stage/applications"
 mkdir -p "$apps/icons"
 
@@ -140,9 +164,20 @@ for t in $license_files; do
 done
 install -m 666 "$ROOT/res/icons/pboffice.bmp"            "$apps/icons/pboffice.bmp"
 install -m 666 "$ROOT/res/icons/pboffice_f.bmp"          "$apps/icons/pboffice_f.bmp"
-install -m 644 "$ROOT/INSTALL.md"                       "$stage/INSTALL.md"
+sed "s/@VERSION@/$VERSION/g" "$ROOT/packaging/manifest.template.json" > "$stage/manifest.json"
 
+left="$(grep -Eo '@[A-Z_]+@' "$stage/manifest.json" | head -n 1 || true)"
+[ -z "$left" ] || { echo "manifest template has an unfilled placeholder: $left" >&2; exit 1; }
+
+# A ZIP of the same version from an earlier build is replaced, never kept next to a failed build.
 rm -f "$ZIP"
-( cd "$stage" && zip -r -q "$ZIP" . )
-check_zip_size "$ZIP" >&2 || { rm -f "$ZIP"; exit 1; }
+# Pack twice: the store's tool must give the same zip for the same files.
+for n in a b; do
+    "$PBSTORE" pack "$stage" --out "$work/$n.zip" >&2 || { echo "pbstore-catalog pack failed" >&2; exit 1; }
+done
+cmp -s "$work/a.zip" "$work/b.zip" || { echo "package is not reproducible: two builds from the same files differ" >&2; exit 1; }
+echo "reproducible: two packs are identical (sha256 $(sha256sum "$work/a.zip" | cut -d' ' -f1))" >&2
+"$PBSTORE" check-package "$work/a.zip" >&2 || { echo "package check failed" >&2; exit 1; }
+check_zip_size "$work/a.zip" >&2 || exit 1
+mv "$work/a.zip" "$ZIP"
 echo "$ZIP"

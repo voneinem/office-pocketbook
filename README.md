@@ -85,7 +85,9 @@ The interface is English with a German translation (Settings > Language; texts i
 ## Installation
 
 Install from the release package `pboffice-inkpad-one-<version>.zip`: copy the `applications/` folder onto the
-reader and register the app in the Applications menu. The full steps are in [`INSTALL.md`](INSTALL.md).
+reader and register the app in the Applications menu. The full steps are in [`INSTALL.md`](INSTALL.md) (it is in the
+repository and linked from each release, not inside the package). The package also holds a `manifest.json` for the PB Store;
+the manual route does not use it.
 
 ## Usage
 
@@ -134,6 +136,34 @@ scripts/package-device.sh build-arm/app/pboffice.app "" build-arm/dist build-arm
 
 The app carries its own libcurl 8.18.0, because the reader's libcurl is too old to read IMAP answers. Build it once
 with `scripts/build-curl-arm.sh` before configuring the ARM build. See also `cmake/sdk.cmake`.
+
+The install package follows the PB Store package contract: `manifest.json` (made from
+[`packaging/manifest.template.json`](packaging/manifest.template.json) and the `VERSION` file; change the fixed values
+there) and the `applications/` tree, nothing else at the top level. `INSTALL.md` is not in the package; it lives in the
+repository and is linked from each release. The script packs twice with `pbstore-catalog pack`, requires both zips to be
+identical, runs `pbstore-catalog check-package` and the size check, and only then writes
+`<out-dir>/pboffice-inkpad-one-<version>.zip`. It needs `pbstore-catalog` from the appstore-pocketbook repository,
+**tag v0.1.4 or newer** (older tools reject the `+` in the names of the time zone files), on `PATH` or named by the
+environment variable `PBSTORE_CATALOG` (the tool's path; there is no default location), and stops with a message when
+the tool is missing. The release check (`scripts/check-release.sh`) and the packaging tests also use `unzip` and `python3`.
+
+Releasing is a deliberate step of the maintainer, done only after the merge and when it has been decided to publish (the
+build never tags or publishes). The steps stop at the first failure and never replace an existing tag or release; the
+`&&` chain runs the release check before the tag is made:
+
+```bash
+VERSION_NOW="$(cat VERSION)"
+git rev-parse -q --verify "refs/tags/v$VERSION_NOW" && echo "tag exists: stop"          # must print nothing
+git ls-remote --tags origin "v$VERSION_NOW"                                             # must print nothing
+gh release view "v$VERSION_NOW" && echo "release exists: stop"                          # must fail
+scripts/check-release.sh "build-arm/dist/pboffice-inkpad-one-$VERSION_NOW.zip" "v$VERSION_NOW" \
+  && git tag -a "v$VERSION_NOW" -m "PB Office $VERSION_NOW" && git push origin "v$VERSION_NOW" \
+  && gh release create "v$VERSION_NOW" "build-arm/dist/pboffice-inkpad-one-$VERSION_NOW.zip" --title "PB Office $VERSION_NOW" \
+       --notes-file release-notes.md   # the changelog entry and a link to INSTALL.md at that tag
+```
+
+The link in the notes is `<repository>/blob/v<version>/INSTALL.md`. Afterwards download the attached zip and run
+`pbstore-catalog check-package` on it; its SHA-256 equals the one printed when it was built.
 
 ## Testing
 

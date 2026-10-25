@@ -51,6 +51,11 @@ set_tests_properties(check_fixtures check_fixtures_selftest check_constitution c
 add_test(NAME launcher_script COMMAND ${CMAKE_SOURCE_DIR}/tests/launcher/test_launcher.sh ${CMAKE_SOURCE_DIR})
 add_test(NAME launcher_handoff_script COMMAND ${CMAKE_SOURCE_DIR}/tests/launcher/test_handoff_launcher.sh ${CMAKE_SOURCE_DIR})
 set_tests_properties(launcher_handoff_script PROPERTIES LABELS "script")
+# The release package follows the PB Store package contract (spec 004). Exit 77: the store's tool is not installed.
+add_test(NAME packaging_script COMMAND ${CMAKE_SOURCE_DIR}/tests/packaging/test_package_device.sh ${CMAKE_SOURCE_DIR})
+set_tests_properties(packaging_script PROPERTIES LABELS "script" SKIP_RETURN_CODE 77)
+add_test(NAME check_release_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-release.sh --self-test)
+set_tests_properties(check_release_selftest PROPERTIES LABELS "script")
 add_test(NAME probe_script COMMAND ${CMAKE_SOURCE_DIR}/tests/launcher/test_probe.sh ${CMAKE_SOURCE_DIR} $<TARGET_FILE:pbo-probe>)
 add_test(NAME check_fake_markers COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-fake-markers.sh ${CMAKE_SOURCE_DIR})
 add_test(NAME check_fake_markers_selftest COMMAND ${CMAKE_SOURCE_DIR}/scripts/check-fake-markers.sh --self-test)

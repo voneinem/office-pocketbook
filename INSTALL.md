@@ -6,6 +6,9 @@ files and its own data folder and never touches PB Notes.
 
 ## 1. Copy the files
 
+The package holds two things at its top level: the `applications/` folder and a `manifest.json`, which the PB Store reads and
+the steps below do not use. This file (`INSTALL.md`) is not in the package; it is in the repository and linked from each release.
+
 1. Connect the reader over USB so its storage appears as a drive.
 2. Unzip the package and copy the `applications/` folder into the **root** of the reader's
    storage, merging it with the existing `applications/` folder. You should end up with:
