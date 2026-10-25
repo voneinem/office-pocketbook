@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "id": "pboffice",
+  "name": "PB Office",
+  "version": "@VERSION@",
+  "min_firmware": "6.11.1437",
+  "target_device": "InkPad One",
+  "menu_entry": {
+    "id": "U_PbOffice",
+    "title": "PB Office",
+    "path": "applications/pboffice.app",
+    "icon": "applications/icons/pboffice.bmp",
+    "focused_icon": "applications/icons/pboffice_f.bmp",
+    "group": "@General"
+  },
+  "data_dir": "system/pboffice"
+}

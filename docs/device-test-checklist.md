@@ -17,11 +17,12 @@ value) · **F** failed (what happened).
 
 | ID | Item | Expected | Status | Date | Value / note |
 |----|------|----------|--------|------|--------------|
-| DT-INS-1 | Install per `INSTALL.md`, register `U_PbOffice`, start the app | The icon appears; the app opens on the account setup page (no account) or on the start page | O | 2026-10-16 | The owner has installed several builds this way; no timing |
+| DT-INS-1 | Install per `INSTALL.md`, register `U_PbOffice`, start the app | The icon appears; the app opens on the account setup page (no account) or on the start page | O | 2026-10-16 | The owner has installed several builds this way; no timing. 2026-10-25: 0.4.1 (store layout, spec 004) copied over 0.4.0; PB Office started, the log shows two launches with exit code 0 and no error line, About says Version 0.4.1 (read by the owner via the message list's info icon) |
 | DT-INS-2 | Cold start to the first usable screen (SC-003) | under 5 s | U | | |
 | DT-INS-3 | Package size | at most 25 MB (`scripts/package-device.sh` refuses more) | V | 2026-10-16 | 4.3 MB (host check of the zip, not a device measurement) |
-| DT-INS-4 | Upgrade over an older build keeps the data folder `system/pboffice/` and the account | Account and mail are still there | O | 2026-10-16 | Several upgrades by the owner; schema upgrades are covered by `test_store_migrations` |
-| DT-INS-5 | notes-pocketbook and InkFeed are untouched by installing and starting PB Office | Their files are unchanged | U | | |
+| DT-INS-4 | Upgrade over an older build keeps the data folder `system/pboffice/` and the account | Account and mail are still there | O | 2026-10-16 | Several upgrades by the owner; schema upgrades are covered by `test_store_migrations`. 2026-10-25 (0.4.0 to 0.4.1, no schema change): Settings showed the stored values and the Mail tile opened the mail; `pboffice.db` was not modified (its time stamp stayed at 2026-10-24 23:43) |
+| DT-INS-5 | notes-pocketbook and InkFeed are untouched by installing and starting PB Office | Their files are unchanged | U | | 2026-10-25: the package holds only `pboffice*` and `pbo-*` files (host check), but PB Notes was not started afterwards, so this stays unverified |
+| DT-INS-6 | The 0.4.1 package (manifest.json at the top, `INSTALL.md` not inside) installs by the manual route: copy `applications/` | Same files as 0.4.0 on the reader; the app starts | O | 2026-10-25 | 622 files copied, compared byte for byte before and after the eject: 0 differences. Only the manual route; what the PB Store's installer does on a reader is unverified |
 
 ## Account and security (US1, FR-004)
 
