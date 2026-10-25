@@ -348,6 +348,32 @@ TestCase {
         p.destroy()
     }
 
+
+    // Bug settings-page-no-paging: the page was taller than the screen, dragging is off (e-ink) and there were no page buttons,
+    // so the rows below the first screen (the address books, About with the version) could not be reached.
+    function test_the_settings_page_can_be_paged_to_every_row() {
+        var p = page("SettingsPage.qml")
+        var view = findChild(p, "settingsView")
+        verify(view !== null, "the settings list has no name settingsView")
+        wait(100)   // the column lays out its rows when the page is first shown
+        verify(view.contentHeight > view.height, "the test window must be smaller than the page")
+        verify(findChild(p, "pageUp") !== null && findChild(p, "pageDown") !== null, "no page buttons")
+        compare(view.contentY, 0)
+        verify(!findChild(p, "pageUp").enabled)
+        verify(findChild(p, "pageDown").enabled)
+        var about = findChild(p, "settingsAbout")
+        verify(about.mapToItem(view, 0, 0).y + about.height > view.height, "About must start out of sight in this window")
+        for (var i = 0; i < 40 && findChild(p, "pageDown").enabled; ++i) tap(p, "pageDown")
+        verify(!findChild(p, "pageDown").enabled, "the last page was not reached")
+        var top = about.mapToItem(view, 0, 0).y
+        verify(top >= 0 && top + about.height <= view.height, "About is not fully inside the view on the last page")
+        // the view ends above the page buttons, so no row is hidden behind them (the 96 px buttons overhang their 92 px bar by 2 px)
+        var down = findChild(p, "pageDown")
+        verify(view.mapToItem(p, 0, view.height).y <= down.mapToItem(p, 0, 0).y + down.height / 2, "the view reaches under the page buttons")
+        for (var j = 0; j < 40 && findChild(p, "pageUp").enabled; ++j) tap(p, "pageUp")
+        compare(view.contentY, 0)
+        p.destroy()
+    }
     function test_the_home_page_lists_today_and_tomorrow_and_leads_to_the_agenda() {
         harness.addEvent("Standup", 2026, 10, 14, 15, 0, 30)
         harness.addEvent("Dentist", 2026, 10, 15, 8, 0, 45)

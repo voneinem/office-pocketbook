@@ -3,6 +3,16 @@
 Versions follow MAJOR.MINOR.PATCH. A branch that changes the product raises VERSION and adds an entry here
 (`scripts/check-version-bump.sh`). The tag `v<version>` is set after the merge.
 
+## 0.4.2 - 2026-10-25
+
+Fix: the Settings page can be paged (bug `settings-page-no-paging`, `.specify/bugs/settings-page-no-paging/`). The page was taller than the screen, dragging is off on purpose
+(e-ink), and it had no page buttons, so the rows below the first screen (the rest of the address books, the notes and "About, licenses" with the version) could not be reached.
+The page now has the same page up / page down buttons with "n / total" as the contact page, below the list. Nothing else changed in the app.
+
+### Not verified
+- Tried by the owner on the reader (2026-10-25, firmware 6.11.1437): "Works!"; the About page was reached from Settings (log `about.opened`). The number of pages, the look of the page break
+  and the timing were not recorded (`docs/device-test-checklist.md` DT-SET-1). The host test is `test_the_settings_page_can_be_paged_to_every_row` (window 800 x 600).
+
 ## 0.4.1 - 2026-10-25
 
 The release package follows the PB Store package contract (spec 004), so the PB Store can list PB Office. The app is the 0.4.0 app apart from its version string;
