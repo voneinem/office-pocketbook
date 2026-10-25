@@ -60,8 +60,12 @@ Item {
         leftItems: [ IconButton { objectName: "settingsBack"; text: qsTr("Back"); icon: "chevron-left"; onClicked: if (page.StackView.view) page.StackView.view.pop() } ]
     }
 
+    // The page is taller than the screen and dragging is off (kinetic scrolling smears on e-ink), so the rows below the
+    // first screen are reached with the page buttons of the bar below, as on the contact and licence pages.
     Flickable {
-        anchors { left: parent.left; right: parent.right; top: topBar.bottom; bottom: parent.bottom }
+        id: view
+        objectName: "settingsView"
+        anchors { left: parent.left; right: parent.right; top: topBar.bottom; bottom: bottomBar.top }
         contentWidth: width
         contentHeight: column.implicitHeight + 40
         boundsBehavior: Flickable.StopAtBounds
@@ -259,6 +263,19 @@ Item {
             }
             Head { text: qsTr("About this app") }
             InkRow { objectName: "settingsAbout"; text: qsTr("About, licenses"); chevron: true; onClicked: page.push("AboutPage.qml") }
+        }
+    }
+
+    Item {
+        id: bottomBar
+        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+        height: Style.bottomBarHeight
+        Rectangle { y: 0; width: parent.width; height: Style.hairlineWidth; color: Style.hairline }
+        PageButtons {
+            id: pager
+            anchors.centerIn: parent
+            target: view
+            showIndicator: true
         }
     }
 
