@@ -10,8 +10,8 @@ Fix: the Settings page can be paged (bug `settings-page-no-paging`, `.specify/bu
 The page now has the same page up / page down buttons with "n / total" as the contact page, below the list. Nothing else changed in the app.
 
 ### Not verified
-- The host test (`test_the_settings_page_can_be_paged_to_every_row`, window 800 x 600) shows that every row is reachable and that nothing is hidden behind the buttons; **how it looks and feels
-  on the reader has not been tried yet** (`docs/device-test-checklist.md` DT-SET-1).
+- Tried by the owner on the reader (2026-10-25, firmware 6.11.1437): "Works!"; the About page was reached from Settings (log `about.opened`). The number of pages, the look of the page break
+  and the timing were not recorded (`docs/device-test-checklist.md` DT-SET-1). The host test is `test_the_settings_page_can_be_paged_to_every_row` (window 800 x 600).
 
 ## 0.4.1 - 2026-10-25
 

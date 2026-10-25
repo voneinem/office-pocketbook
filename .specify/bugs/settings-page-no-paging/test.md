@@ -4,18 +4,18 @@
 - **Tested**: 2026-10-25
 - **Assessment**: ./assessment.md
 - **Fix**: ./fix.md
-- **Result**: partial (verified on the host; the original symptom was seen on the reader and has **not** been re-tried there)
+- **Result**: verified (host tests 2026-10-25; on the reader by the owner the same day, see below)
 
 ## Summary
 
-The fix holds on the host: the new test failed before the change and passes after it, and the whole local gate (173 tests, UI style, translations, version bump, secret scan) is green with no regression. The assessment's reproduction is "open Settings on the InkPad One and try to reach About"; that was not repeated on the reader (it needs the 0.4.2 package installed), so the result is `partial`, not `verified`.
+The fix holds: the new test failed before the change and passes after it, the whole local gate (173 tests, UI style, translations, version bump, secret scan) is green with no regression, and the owner confirmed on the InkPad One (0.4.2, firmware 6.11.1437) that Settings can be paged down to "About, licenses" (log: `about.opened`, exit code 0, no error line).
 
 ## Checks Performed
 
 | Check | Command / Action | Result | Notes |
 |-------|------------------|--------|-------|
 | Reproduction (post-fix), automated equivalent | `ctest --test-dir build-host -R calendar_flow` (`test_the_settings_page_can_be_paged_to_every_row`) | pass | in a 800 x 600 window; failed before the change with "the settings list has no name settingsView" |
-| Reproduction (post-fix) on the reader | open Settings on the InkPad One, page down to "About, licenses" | not-run | needs the 0.4.2 package on the reader (DT-SET-1 stays unverified) |
+| Reproduction (post-fix) on the reader | 0.4.2 installed on the InkPad One (622 files compared, 0 differences); the owner opened Settings and paged down to "About, licenses" | pass | owner: "Works!"; log: launch 15:21:43, `about.opened` 15:21:53, exit code 0, no error line, `pboffice.db` untouched |
 | New / updated tests | `ctest --test-dir build-host -R calendar_flow` | pass | 25 cases, the older Settings tests unchanged and passing |
 | Regression suite | `scripts/pre-merge.sh` | pass | 173 of 173 tests, secret scan clean |
 | UI style | `scripts/check-ui-style.sh .` | pass | exit 0 |
@@ -32,10 +32,9 @@ pre-merge checks passed
 
 ## Residual Risks
 
-- The reader's screen is 1404 x 1872; the host test window is 800 x 600 and the page overflows there by only about 38 px (no accounts), so the number of pages on the reader (probably two) and the look of the page break are untested.
-- The step of one page is the screen height minus 80 px; a row at the break can be cut and then shows on both pages. Same behavior as the other pages with `PageButtons`; not checked on the Settings rows.
-- No ARM build or package of 0.4.2 has been made yet.
+- The owner's confirmation was "Works!"; the number of pages, the look of the page break (a row cut at the break shows on both pages) and the timing were not recorded.
+- The host test window is 800 x 600 and the page overflows there by only about 38 px; the test proves reachability and the layout rule, not the reader's page count.
 
 ## Recommendation
 
-Merge the fix and release 0.4.2 only after the reader check: build the ARM binary and the package (`scripts/package-device.sh`), install on the owner's go, open Settings, page down to "About, licenses", and record the date and result in DT-SET-1. If the page break or the buttons look wrong on the reader, reopen with the screenshot and re-run `/speckit-bug-assess`.
+Close the bug: verified on the host and on the reader. Merge the fix, tag `v0.4.2` after the merge and publish the package on the owner's go.
